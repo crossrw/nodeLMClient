@@ -1,0 +1,15 @@
+{
+  "name": "lmclient",
+  "version": "1.0.0",
+  "description": "Node.js client for SCADA system Lanmon",
+  "main": "lmclient.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "scada",
+    "lanmon"
+  ],
+  "author": "MNPP Saturn",
+  "license": "ISC"
+}
