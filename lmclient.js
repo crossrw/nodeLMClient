@@ -36,6 +36,7 @@ const VT_UI2            = 18;
 const VT_UI4            = 19;
 const VT_STRING         = 256;
 const VT_ARRAY          = 4096;
+const VT_MASK           = 4095;
 const validTypes = [VT_EMPTY, VT_I2, VT_I4, VT_R4, VT_R8, VT_DATE, VT_BOOL, VT_I1, VT_UI1, VT_UI2, VT_UI4, VT_STRING];
 
 // идентификаторы атрибутов
@@ -317,7 +318,7 @@ class LMClient extends EventEmitter {
             /** @type {Channel2} */
             let channel = _this.channels[name];
             channel.needRegister = true;
-            channel.needSend = ('value' in _this.channels[name]);
+            channel.needSend = ('value' in channel);
             channel.active = false;
             channel.number = -1;
         });
@@ -340,7 +341,7 @@ class LMClient extends EventEmitter {
     addChannel(name, type, units, comment, signification, writeEnable, saveServer) {
         // проверка на корректность типа данных
         if(type > 8191) return false;
-        if(!validTypes.includes(type & 4095)) return false;
+        if(!validTypes.includes(type & VT_MASK)) return false;
         // проверка на дублирование имени
         if(name in this.channels) return false;
         // создаем канал
@@ -443,9 +444,7 @@ class LMClient extends EventEmitter {
             while (offset < data.length) {
                 // читаю команду
                 var cmd = data.readUInt8(offset++);
-
-                console.log('receive command:' + cmd);
-
+                // console.log('receive command:' + cmd);
                 switch(cmd) {
                     case 2:
                         // старый ответ на регистрацию
@@ -699,10 +698,19 @@ class LMClient extends EventEmitter {
                             this.channelsNumbers[channelNumber] = channelName;
                             let channel = this.channels[channelName];
                             channel.number = channelNumber;
+                            let oldActive = channel.active;
                             channel.active = !!(flags & 1);
                             // записываем принятые атрибуты
                             for(let i=0; i<recAttributes.length; i++) {
                                 channel.attributes[recAttributes[i].id] = recAttributes[i];
+                            }
+                            // проверка на смену активности
+                            if(channel.active && !oldActive) {
+                                if(channel.needSend) {
+                                    // если появилась активность, то передаем значение канала
+                                    this._sendChannel(channel);
+                                    channel.needSend = false;
+                                }
                             }
                         }
                         //
@@ -792,7 +800,7 @@ class LMClient extends EventEmitter {
      */
     _sendRequestStatus() {
         // Cmd:         UI1     18
-        var buf = Buffer.alloc(1);
+        var buf = Buffer.allocUnsafe(1);
         buf.writeUInt8(18, 0);
         // передача
         this.socket.write(buf);
@@ -801,17 +809,14 @@ class LMClient extends EventEmitter {
      * Отправка всего: регистрация каналов, значений, атрибутов...
      */
     _sendAll() {
-        // регистрация каналов
         Object.keys(this.channels).forEach(name => {
             let channel = this.channels[name];
+            // регистрация каналов
             if(channel.needRegister) {
                 this._registerChannel(channel);
                 channel.needRegister = false;
             }
-        });
-        // отправка данных
-        Object.keys(this.channels).forEach(name => {
-            let channel = this.channels[name];
+            // отправка данных
             if(channel.needSend && channel.active) {
                 this._sendChannel(channel);
                 channel.needSend = false;
@@ -830,7 +835,7 @@ class LMClient extends EventEmitter {
         // Type         UI2                 тип канала
         // AttrCount    UI2                 количество атрибутов
         // Attributes                       массив атрибутов
-        var buf = Buffer.alloc(4096);
+        var buf = Buffer.allocUnsafe(4096);
         // команда
         var offset = buf.writeUInt8(51, 0);
         // размер структуры пока не пишем
@@ -929,7 +934,7 @@ class LMClient extends EventEmitter {
      * @returns {Buffer}
      */
     _attributeToBuffer(attr) {
-        var buf = Buffer.alloc(1024);
+        var buf = Buffer.allocUnsafe(1024);
         // проверка типа атрибута
         if(!(attr.id in validAttributes)) throw new Error('атрибут с неизвестным идентификатором id:' + attr.id);
         var attrType = validAttributes[attr.id];
@@ -949,12 +954,45 @@ class LMClient extends EventEmitter {
      * @returns {VarType} 
      */
     _readVarTypeValue(buf, offset) {
-        var start = offset;
-        var result = {};
+        let start = offset;
+        let result = {};
         result.type = buf.readUInt16LE(offset);
         offset += 2;
         //
-        switch(result.type) {
+        if(result.type & VT_ARRAY) {
+            // одномерный массив, читаем количество элементов
+            let len = buf.readUInt16LE(offset);
+            offset += 2;
+            //
+            result.value = [];
+            for(let i=0; i<len; i++) {
+                // элементы массива
+                let vtv = this._readVarTypeValuePrimitive(buf, offset, result.type & VT_MASK);
+                result.value.push(vtv.value);
+                offset += vtv.size;
+            }
+        } else {
+            // простая переменная
+            let vtv = this._readVarTypeValuePrimitive(buf, offset, result.type);
+            result.value = vtv.value;
+            offset += vtv.size;
+        }
+        //
+        result.size = offset - start;
+        return result;
+    }
+    /**
+     * Чтение простого типа данных (не массива) из буфера
+     * @param {Buffer} buf - буфер
+     * @param {number} offset - смещение в буфере
+     * @param {number} type - тип данных
+     * @returns {VarType} 
+     */
+    _readVarTypeValuePrimitive(buf, offset, type) {
+        let start = offset;
+        let result = {};
+        //
+        switch(type) {
             case VT_EMPTY:
                 result.value = null;
                 break;
@@ -999,14 +1037,13 @@ class LMClient extends EventEmitter {
                 offset += 4;
                 break;
             case VT_STRING:
-                var len = buf.readUInt16LE(offset);
+                let len = buf.readUInt16LE(offset);
                 offset += 2;
                 result.value = win1251toUtf8(buf.toString('binary', offset, offset + len));
                 offset += len;
                 break;
             default:
-                /** @todo поддержка массивов !!! */
-                throw new Error('неподдерживаемый тип данных type:' + result.type);
+                throw new Error('неподдерживаемый тип данных type:' + type);
         }
         result.size = offset - start;
         return result;
@@ -1019,9 +1056,36 @@ class LMClient extends EventEmitter {
      */
     _writeVarTypeValue(value, type) {
         /** @type {Buffer} */
-        var buf = Buffer.alloc(1024);
+        var buf = Buffer.allocUnsafe(4096);
         // запись типа переменной
         var offset = buf.writeUInt16LE(type, 0);
+        //
+        if((type & VT_ARRAY) && Array.isArray(value)) {
+            // одномерный массив, кладем количество элементов
+            offset = buf.writeUInt16LE(value.length, offset);
+            //
+            for(let i=0; i<value.length; i++) {
+                // элементы массива
+                offset += this._writeVarTypeValuePrimitive(value[i], type & VT_MASK).copy(buf, offset);
+            }
+        } else {
+            // простая переменная
+            offset += this._writeVarTypeValuePrimitive(value, type & VT_MASK).copy(buf, offset);
+        }
+        // возвращаем кусок буфера
+        return buf.slice(0, offset);
+    }
+    /**
+     * Запись значения простого переменного типа (не массива) в буфер
+     * @param {*} value значение
+     * @param {number} type тип
+     * @returns {Buffer}
+     */
+    _writeVarTypeValuePrimitive(value, type) {
+        /** @type {Buffer} */
+        var buf = Buffer.allocUnsafe(1024);
+        //
+        var offset = 0;
         //
         switch(type) {
             case VT_EMPTY:
@@ -1069,7 +1133,7 @@ class LMClient extends EventEmitter {
                 break;
             default:
                 /** @todo поддержка массивов !!! */
-                throw new Error('неподдерживаемый тип данных type:' + result.type);
+                throw new Error('неподдерживаемый тип данных type:' + type);
         }
         // возвращаем кусок буфера
         return buf.slice(0, offset);
@@ -1095,7 +1159,7 @@ class LMClient extends EventEmitter {
     _vt_string(str) {
         str = utf8ToWin1251(str);
         //
-        var buf = Buffer.alloc(str.length + 2);
+        var buf = Buffer.allocUnsafe(str.length + 2);
         buf.writeUInt16LE(str.length, 0);
         buf.write(str, 2, 'binary');
         return buf;
