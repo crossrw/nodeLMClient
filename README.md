@@ -2,7 +2,7 @@
 
 ## Краткое описание
 
-Библиотека предназначена для организации подключения к серверу SCADA системы LanMon.
+Библиотека предназначена для организации подключения к серверу SCADA системы LanMon из программ написанных на языке js.
 
 Более подробное описание SCADA системы LanMon можно получить по адресу <https://www.mnppsaturn.ru/?topic_id=3&good_id=184>.
 
@@ -10,10 +10,13 @@
 
 * подключение к серверу системы
 * автоматические повторные подключения при обрыве соединения или ошибках
+* автоматическая периодическая проверка канала связи с сервером
 * создание каналов со всеми поддерживаемыми сервером типами данных (включая массивы)
 * поддержка основных типов атрибутов каналов
 * поддержка установки значения свойства **quality**
 * поддержка получения команд управления
+* автоматическое преобразование кодировки значений каналов типа ```VT_STRING``` из кодировки CP1251 в UTF-8 и обратно
+* преообразование типа данных ```VT_DATE``` в объект js ```Date()``` и обратно с использованием информации о часовом поясе сервера
 
 Библиотека поддерживает работу с сервером LanMon начиная с его версии 4.12.
 
@@ -76,18 +79,6 @@ client.addChannel('channel_VT_R8', lm.VT_R8, 'мешки', 'тип VT_R8', 0);
 client.addChannel('channel_VT_DATE', lm.VT_DATE, 'дата и время', 'тип VT_DATE', 0);
 client.addChannel('channel_VT_BOOL', lm.VT_BOOL, 'хорошо или плохо', 'тип VT_BOOL', 0);
 client.addChannel('channel_VT_STRING', lm.VT_STRING, 'это строка', 'тип VT_STRING', 0);
-// создаем каналы всех типов с возможностью управления
-client.addChannel('channelw_VT_I1', lm.VT_I1, 'вольты', 'тип VT_I1', 0, true);
-client.addChannel('channelw_VT_UI1', lm.VT_UI1, 'амперы', 'тип VT_UI1', 0, true);
-client.addChannel('channelw_VT_I2', lm.VT_I2, 'секунды', 'тип VT_I2', 0, true);
-client.addChannel('channelw_VT_UI2', lm.VT_UI2, 'килограммы', 'тип VT_UI2', 0, true);
-client.addChannel('channelw_VT_I4', lm.VT_I4, 'миллиметры', 'тип VT_I4', 0, true);
-client.addChannel('channelw_VT_UI4', lm.VT_UI4, 'паскали', 'тип VT_UI4', 0, true);
-client.addChannel('channelw_VT_R4', lm.VT_R4, 'омы', 'тип VT_R4', 0, true);
-client.addChannel('channelw_VT_R8', lm.VT_R8, 'мешки', 'тип VT_R8', 0, true);
-client.addChannel('channelw_VT_DATE', lm.VT_DATE, 'дата и время', 'тип VT_DATE', 0, true);
-client.addChannel('channelw_VT_BOOL', lm.VT_BOOL, 'хорошо или плохо', 'тип VT_BOOL', 0, true);
-client.addChannel('channelw_VT_STRING', lm.VT_STRING, 'это строка', 'тип VT_STRING', 0, true);
 // подключаемся к серверу
 client.connect();
 
