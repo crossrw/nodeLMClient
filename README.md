@@ -4,7 +4,7 @@
 
 Библиотека предназначена для организации подключения к серверу SCADA системы LanMon.
 
-Более подробное описание SCADA системы LanMon можно получить по адресу http://www.mnppsaturn.ru/?topic_id=3&good_id=184.
+Более подробное описание SCADA системы LanMon можно получить по адресу <https://www.mnppsaturn.ru/?topic_id=3&good_id=184>.
 
 Основные функции библиотеки:
 
@@ -120,4 +120,4 @@ setInterval(function(){
 
 ## Обратная связь
 
-Замечания и предложения отправляйте на адрес lanmon@mnppsaturn.ru или создавайте **Issues/Pull requests**.
+Замечания и предложения отправляйте на адрес lanmon@mnppsaturn.ru или непосредственно в **Issues/Pull requests**.
