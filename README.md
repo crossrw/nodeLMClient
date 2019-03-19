@@ -423,3 +423,6 @@ setInterval(function(){
 ## Обратная связь
 
 Замечания и предложения отправляйте на адрес lanmon@mnppsaturn.ru или непосредственно в **Issues/Pull requests**.
+
+* * *
+&copy; 2019 ООО "МНПП Сатурн"
