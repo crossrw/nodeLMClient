@@ -6,10 +6,18 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/crossrw/nodeLMClient"
+  },
   "keywords": [
     "scada",
     "lanmon"
   ],
   "author": "MNPP Saturn",
-  "license": "MIT"
+  "license": "MIT",
+  "homepage": "https://github.com/crossrw/nodeLMClient",
+  "devDependencies": {
+    "eslint": "^5.15.3"
+  }
 }

@@ -96,7 +96,7 @@ const ATTR_UNITNUMBER       = 5202;
 
 // типы атрибутов
 const validAttributes = {};
-validAttributes[ATTR_EUType]             = VT_STRING;
+validAttributes[ATTR_EUType]             = VT_I2;
 validAttributes[ATTR_EUInfo1]            = VT_R8 + VT_ARRAY;
 validAttributes[ATTR_EUInfo2]            = VT_STRING + VT_ARRAY;
 validAttributes[ATTR_EUInfo3]            = VT_I4;
@@ -152,6 +152,7 @@ validAttributes[ATTR_UNITNUMBER]         = VT_UI4;
 
 /**
  * Канал сервера (тип2)
+ * @private
  * @typedef {Object} Сhannel2
  * @property {string} name - наименование
  * @property {number} number - числовой идентификатор на сервере
@@ -168,6 +169,7 @@ validAttributes[ATTR_UNITNUMBER]         = VT_UI4;
  */
 /**
  * Атрибут канал (тип2)
+ * @private
  * @typedef {Object} Attribute
  * @property {number} id - идентификатор
  * @property {*} value - значение
@@ -176,15 +178,39 @@ validAttributes[ATTR_UNITNUMBER]         = VT_UI4;
  */
 /**
  * Значение переменного типа
+ * @private
  * @typedef {Object} VarType
  * @property {(number|string|boolean|number[]|string[]|boolean[])} value - значение
  * @property {number} type - тип
  * @property {number} size - размер
  */
+/**
+ * Параметры подключения к серверу
+ * @typedef {Object} ConnectOptions
+ * @property {string} host - адрес сервера
+ * @property {number} port - номер TCP порта
+ * @property {string} login - логин
+ * @property {string} password - пароль
+ * @property {string} reconnect - автоматически переподключаться при ошибках и разрывах связи
+ * @property {string} opros - тип учетной записи "опрос"
+ * @property {string} client - тип учетной записи "клиент" (пока не поддерживается)
+ */
+/**
+ * Параметры задаваемые при создании канала
+ * @typedef {Object} ChannelOptions
+ * @property {string} [units] - единицы измерения
+ * @property {string} [comment] - текстовое описание
+ * @property {number} [signification] - назначение
+ * @property {boolean} [saveValue] - сохранять значение на сервере при отключении опросчика
+ * @property {Array.<string>} [enum] - массив строк, соответствующих значению канала
+ * @property {Array.<number>} [bounds] - массив из двух элементов [нижняя граница, верхняя граница]
+ * @property {number} [percentDeadband] - величина "мертвой зоны" изменения значения канала в процентах
+ */
 
 const win1251Map = {0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7, 8: 8, 9: 9, 10: 10, 11: 11, 12: 12, 13: 13, 14: 14, 15: 15, 16: 16, 17: 17, 18: 18, 19: 19, 20: 20, 21: 21, 22: 22, 23: 23, 24: 24, 25: 25, 26: 26, 27: 27, 28: 28, 29: 29, 30: 30, 31: 31, 32: 32, 33: 33, 34: 34, 35: 35, 36: 36, 37: 37, 38: 38, 39: 39, 40: 40, 41: 41, 42: 42, 43: 43, 44: 44, 45: 45, 46: 46, 47: 47, 48: 48, 49: 49, 50: 50, 51: 51, 52: 52, 53: 53, 54: 54, 55: 55, 56: 56, 57: 57, 58: 58, 59: 59, 60: 60, 61: 61, 62: 62, 63: 63, 64: 64, 65: 65, 66: 66, 67: 67, 68: 68, 69: 69, 70: 70, 71: 71, 72: 72, 73: 73, 74: 74, 75: 75, 76: 76, 77: 77, 78: 78, 79: 79, 80: 80, 81: 81, 82: 82, 83: 83, 84: 84, 85: 85, 86: 86, 87: 87, 88: 88, 89: 89, 90: 90, 91: 91, 92: 92, 93: 93, 94: 94, 95: 95, 96: 96, 97: 97, 98: 98, 99: 99, 100: 100, 101: 101, 102: 102, 103: 103, 104: 104, 105: 105, 106: 106, 107: 107, 108: 108, 109: 109, 110: 110, 111: 111, 112: 112, 113: 113, 114: 114, 115: 115, 116: 116, 117: 117, 118: 118, 119: 119, 120: 120, 121: 121, 122: 122, 123: 123, 124: 124, 125: 125, 126: 126, 127: 127, 1027: 129, 8225: 135, 1046: 198, 8222: 132, 1047: 199, 1168: 165, 1048: 200, 1113: 154, 1049: 201, 1045: 197, 1050: 202, 1028: 170, 160: 160, 1040: 192, 1051: 203, 164: 164, 166: 166, 167: 167, 169: 169, 171: 171, 172: 172, 173: 173, 174: 174, 1053: 205, 176: 176, 177: 177, 1114: 156, 181: 181, 182: 182, 183: 183, 8221: 148, 187: 187, 1029: 189, 1056: 208, 1057: 209, 1058: 210, 8364: 136, 1112: 188, 1115: 158, 1059: 211, 1060: 212, 1030: 178, 1061: 213, 1062: 214, 1063: 215, 1116: 157, 1064: 216, 1065: 217, 1031: 175, 1066: 218, 1067: 219, 1068: 220, 1069: 221, 1070: 222, 1032: 163, 8226: 149, 1071: 223, 1072: 224, 8482: 153, 1073: 225, 8240: 137, 1118: 162, 1074: 226, 1110: 179, 8230: 133, 1075: 227, 1033: 138, 1076: 228, 1077: 229, 8211: 150, 1078: 230, 1119: 159, 1079: 231, 1042: 194, 1080: 232, 1034: 140, 1025: 168, 1081: 233, 1082: 234, 8212: 151, 1083: 235, 1169: 180, 1084: 236, 1052: 204, 1085: 237, 1035: 142, 1086: 238, 1087: 239, 1088: 240, 1089: 241, 1090: 242, 1036: 141, 1041: 193, 1091: 243, 1092: 244, 8224: 134, 1093: 245, 8470: 185, 1094: 246, 1054: 206, 1095: 247, 1096: 248, 8249: 139, 1097: 249, 1098: 250, 1044: 196, 1099: 251, 1111: 191, 1055: 207, 1100: 252, 1038: 161, 8220: 147, 1101: 253, 8250: 155, 1102: 254, 8216: 145, 1103: 255, 1043: 195, 1105: 184, 1039: 143, 1026: 128, 1106: 144, 8218: 130, 1107: 131, 8217: 146, 1108: 186, 1109: 190};
 /**
  * Преобразование строки UTF-8 в Windows-1251
+ * @private
  * @param {string} s - исходная строка
  * @returns {string}
  */
@@ -200,6 +226,7 @@ function utf8ToWin1251(s) {
 var utf8Map = {0:'\u0402',1:'\u0403',2:'\u201A',3:'\u0453',4:'\u201E',5:'\u2026',6:'\u2020',7:'\u2021',8:'\u20AC',9:'\u2030',10:'\u0409',11:'\u2039',12:'\u040A',13:'\u040C',14:'\u040B',15:'\u040F',16:'\u0452',17:'\u2018',18:'\u2019',19:'\u201C',20:'\u201D',21:'\u2022',22:'\u2013',23:'\u2014',24:'\x98',25:'\u2122',26:'\u0459',27:'\u203A',28:'\u045A',29:'\u045C',30:'\u045B',31:'\u045F',32:'\xA0',33:'\u040E',34:'\u045E',35:'\u0408',36:'\xA4',37:'\u0490',38:'\xA6',39:'\xA7',40:'\u0401',41:'\xA9',42:'\u0404',43:'\xAB',44:'\xAC',45:'\xAD',46:'\xAE',47:'\u0407',48:'\xB0',49:'\xB1',50:'\u0406',51:'\u0456',52:'\u0491',53:'\xB5',54:'\xB6',55:'\xB7',56:'\u0451',57:'\u2116',58:'\u0454',59:'\xBB',60:'\u0458',61:'\u0405',62:'\u0455',63:'\u0457',64:'\u0410',65:'\u0411',66:'\u0412',67:'\u0413',68:'\u0414',69:'\u0415',70:'\u0416',71:'\u0417',72:'\u0418',73:'\u0419',74:'\u041A',75:'\u041B',76:'\u041C',77:'\u041D',78:'\u041E',79:'\u041F',80:'\u0420',81:'\u0421',82:'\u0422',83:'\u0423',84:'\u0424',85:'\u0425',86:'\u0426',87:'\u0427',88:'\u0428',89:'\u0429',90:'\u042A',91:'\u042B',92:'\u042C',93:'\u042D',94:'\u042E',95:'\u042F',96:'\u0430',97:'\u0431',98:'\u0432',99:'\u0433',100:'\u0434',101:'\u0435',102:'\u0436',103:'\u0437',104:'\u0438',105:'\u0439',106:'\u043A',107:'\u043B',108:'\u043C',109:'\u043D',110:'\u043E',111:'\u043F',112:'\u0440',113:'\u0441',114:'\u0442',115:'\u0443',116:'\u0444',117:'\u0445',118:'\u0446',119:'\u0447',120:'\u0448',121:'\u0449',122:'\u044A',123:'\u044B',124:'\u044C',125:'\u044D',126:'\u044E',127:'\u044F'};
 /**
  * Преобразование строки Windows-1251 в UTF-8 
+ * @private
  * @param {string} s - исходная строка
  * @returns {string}
  */
@@ -217,20 +244,74 @@ function win1251toUtf8(s) {
     return L.join('');
 }
 /**
- * @class Класс клиента сервера LM
+ * Событие формируется при начале подключения к серверу.
  * @event LMClient#connecting
+ * @property {string} host - адрес сервера к которому происходит подключение
+ * @property {number} port - номер TCP-порта сервера
+*/
+/**
+ * Событие формируется когда соединение с сервером установлено.
  * @event LMClient#connect
+*/
+/**
+ * Событие формируется когда соединение с сервером разорвано.
  * @event LMClient#disconnect
+ * @property {boolean} err - признак того, что соединение разорвано в результате ошибки
+*/
+/**
+ * Событие формируется когда клиент успешно зарегистрировался на сервере.
  * @event LMClient#loggedIn
+ * @property {number} serverId - идентификатор клиента на сервере
+ * @property {string} version - версия сервера в формате "hi.lo"
+*/
+/**
+ * Событие формируется при успешном выполнении проверки связи с сервером.
  * @event LMClient#checkConnection
+ * @property {number} delay - задержка в миллисекундах при ответе сервера на команду проверки связи
+ * 
+*/
+/**
+ * Событие формируется при получении от сервера команды синхронизации времени.
  * @event LMClient#timeSynchronize
+ * @property {Date} time - значение времени полученное от сервера
+*/
+/**
+ * Событие формируется при получении от сервера команды записи в канал управления. Для подтверждения получения и обработки этого события
+ * необходимо установить полученное значение канала вызовом setValue(name, value).
+ * @example
+ * client.on('data', function(control){
+ *   console.log('receive channel "' + control.name + '" value="' + control.value + '"');
+ *   client.setValue(control.name, control.value); // подтверждаем прием
+ * });
  * @event LMClient#data
+ * @property {Object} control - полученная команда управления каналом
+ * @property {string} control.name - имя канала для которого пришла команда управления
+ * @property {*} control.value - новое значение канала
+ * @property {Date} control.dt - метка времени
+*/
+/**
+ * Событие формируется при возникновении ошибки. Программа должна содержать обработчик этого события.
  * @event LMClient#error
+ * @property {Error} error - ошибка
+*/
+/**
+ * @class Класс клиента сервера LM
+ * @fires LMClient#connecting
+ * @fires LMClient#connect
+ * @fires LMClient#disconnect
+ * @fires LMClient#loggedIn
+ * @fires LMClient#checkConnection
+ * @fires LMClient#timeSynchronize
+ * @fires LMClient#data
+ * @fires LMClient#error
  */
 class LMClient extends EventEmitter {
     /**
-     * Конструктор
-     * @param {Object} options Параметры подключения к серверу
+     * Конструктор класса.
+     * Создает новый экземпляр класса подключения к серверу. В параметрах конструктора указываются
+     * настройки используемые при подключении к серверу.
+     * @constructor
+     * @param {ConnectOptions} options Параметры подключения к серверу
      */
     constructor(options = {}) {
         super();
@@ -248,8 +329,21 @@ class LMClient extends EventEmitter {
         this.socket = null;
         //
         this.waitStatus = 0;                        // признак ожидания запрошенного статуса
+        /**
+         * Текущее состояние регистрации на сервере.
+         * Значение true соответствует тому, что клиент успешно подключен и зарегестрирован на сервере.
+         * @public
+         * @type {boolean}
+         */
         this.loggedIn = false;                      // клиент зарегистрирован на сервере
-        this.connected = false;                     // клиент подключен к серверу
+        /**
+         * Текущее состояние подключения к серверу.
+         * Значение true соответствует тому, что клиент установил соединение с сервером. Состояние регистрации можно
+         * проконтролировать через свойство loggedIn.
+         * @public
+         * @type {boolean}
+         */
+        this.connected = false;
         this.serverVersion = 0;                     // версия сервера
         this.serverTimeBias = 0;                    // смещение времени сервера
         this.reconnectTimer = null;                 // таймер повторных соединений
@@ -257,17 +351,23 @@ class LMClient extends EventEmitter {
         this.checkConnectInterval = 480000;         // интервал проверки связи с сервером в мс
         /**
          * ассоциативный массив каналов
-         * @type {Object}
+         * @private
+         * @type {Object.<string, Сhannel2>}
          */
         this.channels = {};
         /**
          * ассоциативный массив номеров каналов на сервере
-         * @type {Object}
+         * @private
+         * @type {Object.<number, string>}
          */
         this.channelsNumbers = {};
     }
     /**
-     * Подключение и регистрация на сервере LM
+     * Подключение и регистрация на сервере LM.
+     * Метод начинает процедуру подключения и регистрации к серверу системы LanMon. При подключении используются
+     * параметры указанные при создании класса. Если в параметрах указано значение reconnect: true, то соединение
+     * будет автоматически восстанавливаться в случаях обрыва связи или ошибок.
+     * @public
      */
     connect() {
         var _this = this;
@@ -296,7 +396,9 @@ class LMClient extends EventEmitter {
         });
     }
     /**
-     * Отключиться от сервера
+     * Отключиться от сервера.
+     * Метод разрывает соединение с сервером если оно было ранее установлено вызовом метода connect().
+     * @public
      */
     disconnect() {
         var _this = this;
@@ -328,19 +430,19 @@ class LMClient extends EventEmitter {
         this.socket.destroy();
     }
     /**
-     * Добавляем канал
+     * Добавление нового канала.
+     * Метод добавляет новый канал для регистрации и передачи данных на сервер.
+     * Метод возвращает значение false если канал с указанным именем уже существует или
+     * если указан некорректный тип данных.
+     * @public
      * @param {string} name Имя канала
      * @param {number} type Тип канала
-     * @param {string} [units] Единицы измерения
-     * @param {string} [comment] Текстовое описание
-     * @param {number} [signification=0] Назначение
-     * @param {boolean} [writeEnable=false] Разрешение записи значений
-     * @param {boolean} [saveServer=false] Сохранять значение на сервере при отключении источника
-     * @returns {boolean}
+     * @param {boolean} writeEnable Разрешение записи значений
+     * @param {ChannelOptions} options Параметры канала
+     * @returns {boolean} 
      */
-    addChannel(name, type, units, comment, signification, writeEnable, saveServer) {
+    addChannel(name, type, writeEnable, options = {}) {
         // проверка на корректность типа данных
-        if(type > 8191) return false;
         if(!validTypes.includes(type & VT_MASK)) return false;
         // проверка на дублирование имени
         if(name in this.channels) return false;
@@ -353,19 +455,30 @@ class LMClient extends EventEmitter {
             'needSend': false,
             'active': false,
             'writeEnable': writeEnable || false,
-            'saveServer': saveServer || false,
+            'saveServer': options.saveValue || false,
             'number': -1,
             'attributes': {}
         };
-        // атрибуты
-        if(typeof units === 'string' && units.length > 0) {
-            channel.attributes[ATTR_UNITS] = this._createAttribute(ATTR_UNITS, units);
+        // добавляем атрибуты
+        if(typeof options.units === 'string') {
+            channel.attributes[ATTR_UNITS] = this._createAttribute(ATTR_UNITS, options.units);
         }
-        if(typeof comment === 'string' && comment.length > 0) {
-            channel.attributes[ATTR_COMMENT] = this._createAttribute(ATTR_COMMENT, comment);
+        if(typeof options.comment === 'string') {
+            channel.attributes[ATTR_COMMENT] = this._createAttribute(ATTR_COMMENT, options.comment);
         }
-        if(typeof signification === 'number' && signification > 0) {
-            channel.attributes[ATTR_SIGNIFICATION] = this._createAttribute(ATTR_SIGNIFICATION, signification);
+        if(typeof options.signification === 'number') {
+            channel.attributes[ATTR_SIGNIFICATION] = this._createAttribute(ATTR_SIGNIFICATION, options.signification);
+        }
+        if(('bounds' in options) && Array.isArray(options.bounds)) {
+            channel.attributes[ATTR_EUType] = this._createAttribute(ATTR_EUType, 1);
+            channel.attributes[ATTR_EUInfo1] = this._createAttribute(ATTR_EUInfo1, options.bounds);
+        } else
+        if(('enum' in options) && Array.isArray(options.enum)) {
+            channel.attributes[ATTR_EUType] = this._createAttribute(ATTR_EUType, 2);
+            channel.attributes[ATTR_EUInfo2] = this._createAttribute(ATTR_EUInfo2, options.enum);
+        }
+        if('percentDeadband' in options) {
+            channel.attributes[ATTR_PERCENTDB] = this._createAttribute(ATTR_PERCENTDB, options.percentDeadband);
         }
         // добавляем канал
         this.channels[name] = channel;
@@ -375,9 +488,15 @@ class LMClient extends EventEmitter {
         return true;
     }
     /**
-     * Установка значения канала
+     * Установка значения канала.
+     * Метод устанавливает значение для ранее созданного канала. Тип параметра value должен соответствовать типу
+     * канала указанному при его создании. Установленное значение канала будет передано на сервер. Кроме того, метод
+     * устанавливает свойство канала quality (качество) в значение stOk.
+     * Метод возвращает значение false если канал с указанным именем не найден.
+     * @public
      * @param {string} name Имя канала
      * @param {*} value Новое значение канала
+     * @returns {boolean}
      */
     setValue(name, value) {
         // проверка на наличие канала
@@ -385,6 +504,27 @@ class LMClient extends EventEmitter {
         let channel = this.channels[name];
         // проверка на изменения
         if((channel.quality == stOk) && (channel.value == value)) return true;
+        // фильтрация значений с плавающей точкой
+        try {
+            if(((channel.type == VT_R4)||(channel.type == VT_R8))&&(channel.quality == stOk)&&(ATTR_PERCENTDB in channel.attributes)) {
+                if((ATTR_EUType in channel.attributes)&&(channel.attributes[ATTR_EUType].value == 1)&&(ATTR_EUInfo1 in channel.attributes)) {
+                    // верхний и нижний диапазоны заданы
+                    let minmax = channel.attributes[ATTR_EUInfo1].value;
+                    if(Math.abs(channel.value - value) < Math.abs(minmax[0] - minmax[1])/100 * channel.attributes[ATTR_PERCENTDB].value) {
+                        // console.log('filtered1 ' + name + ' oldValue=' + channel.value + ' newValue=' + value);
+                        return true;
+                    }
+                } else {
+                    // верхний и нижний диапазоны не заданы
+                    if(Math.abs(channel.value - value) < Math.abs(channel.value/100 * channel.attributes[ATTR_PERCENTDB].value)) {
+                        // console.log('filtered2 ' + name + ' oldValue=' + channel.value + ' newValue=' + value);
+                        return true;
+                    }
+                }
+            }
+        } catch(err) {
+            // empty
+        }
         // устанавливаем новое значение
         channel.value = value;
         channel.quality = stOk;
@@ -396,9 +536,11 @@ class LMClient extends EventEmitter {
         return true;
     }
     /**
-     * Установка качества канала
+     * Установка качества канала.
+     * @public
      * @param {string} name Имя канала
      * @param {number} quality Новое значение качества
+     * @returns {boolean}
      */
     setQuality(name, quality) {
         // качество stOk устанавливать нельзя, вместо этого нужно установить значение канала
@@ -418,6 +560,7 @@ class LMClient extends EventEmitter {
     }
     /**
      * Отключение от сервера с последующим возможным повторным подключением
+     * @private
      */
     _disconnect() {
         this.disconnect();
@@ -428,18 +571,14 @@ class LMClient extends EventEmitter {
     }
     /**
      * Пришли данные от сервера
+     * @private
      * @param {Buffer} data буфер с данными
      */
     _onReceiveData(data) {
         // что-то пришло от сервера
         // console.log('receive data length:' + data.length);
-        var size = 0;
-        var flags = 0;
+//        var size = 0;
         var offset = 0;
-        var channelName = '';
-        var channelNumber = 0;
-        var channelNameLen = 0;
-        var serverDateTime = 0;
         try {
             while (offset < data.length) {
                 // читаю команду
@@ -474,16 +613,17 @@ class LMClient extends EventEmitter {
                         // управление каналом 1
                         offset += 38;
                         break;
-                    case 22:
+                    case 22: {
                         // синхронизация времени
                         // ServerTime       VT_DATE
-                        serverDateTime = data.readDoubleLE(offset);
+                        let serverDateTime = data.readDoubleLE(offset);
                         offset += 8;
                         // Reserved         VT_UI1[6]
                         offset += 6;
                         //
                         this.emit('timeSynchronize', this._dateTimeToDate(serverDateTime));
                         break;
+                    }
                     case 23:
                         // извещение клиентам
                         // Message          VT_UI1
@@ -494,25 +634,25 @@ class LMClient extends EventEmitter {
                         // конфигурация A4 новая
                         offset += 98;
                         break;
-                    case 43:
+                    case 43: {
                         // ответ на регистрацию клиента
                         // Id               VT_I4
-                        var clientId = data.readInt32LE(offset);
+                        let clientId = data.readInt32LE(offset);
                         offset += 4;
                         // Reserved1        VT_UI1
                         offset++;
                         // ServerTime       VT_DATE
-                        serverDateTime = data.readDoubleLE(offset);
+                        let serverDateTime = data.readDoubleLE(offset);
                         offset += 8;
                         // HiVer            VT_UI1
-                        var hiVer = data.readUInt8(offset++);
+                        let hiVer = data.readUInt8(offset++);
                         // LoVer            VT_UI1
-                        var loVer = data.readUInt8(offset++);
+                        let loVer = data.readUInt8(offset++);
                         // Reserved2        VT_UI2
                         // Reserved3        VT_UI2
                         offset += 4;
                         // RefusalReason    VT_UI1
-                        var refusalReason = data.readUInt8(offset++);
+                        let refusalReason = data.readUInt8(offset++);
                         // ServerTimeBias   VT_I2
                         this.serverTimeBias = data.readInt16LE(offset);
                         offset += 2;
@@ -551,27 +691,31 @@ class LMClient extends EventEmitter {
                             this._disconnect();
                         }
                         break;
-                    case 53:
+                    }
+                    case 53: {
                         // ответ на запрос всех каналов (начало)
-                        size = data.readUInt16LE(offset);
+                        let size = data.readUInt16LE(offset);
                         offset += 2;
                         //
                         offset += (size - 3);
                         break;
-                    case 54:
+                    }
+                    case 54: {
                         // ответ на запрос всех каналов (продолжение)
-                        size = data.readUInt16LE(offset);
+                        let size = data.readUInt16LE(offset);
                         offset += 2;
                         //
                         offset += (size - 3);
                         break;
-                    case 57:
+                    }
+                    case 57: {
                         // получение состояния канала клиентом от сервера при его изменении или получение опросчиком команды управления
                         // Size             VT_UI2
-                        size = data.readUInt16LE(offset);
+                        // let size = data.readUInt16LE(offset);
                         offset += 2;
                         // Flag             VT_UI1
-                        flags = data.readUInt8(offset++);
+                        let flags = data.readUInt8(offset++);
+                        let channelName;
                         // Id или Number    VT_STRING или VT_UI4
                         if(flags & 1) {
                             // Number
@@ -579,7 +723,7 @@ class LMClient extends EventEmitter {
                             offset += 4;
                         } else {
                             // Id
-                            channelNameLen = data.readUInt16LE(offset);
+                            let channelNameLen = data.readUInt16LE(offset);
                             offset += 2;
                             channelName = win1251toUtf8(data.toString('binary', offset, offset + channelNameLen));
                             offset += channelNameLen;
@@ -605,14 +749,16 @@ class LMClient extends EventEmitter {
                         }
                         //
                         break;
-                    case 58:
+                    }
+                    case 58: {
                         // получение состояния атрибута канала клиентом или опросчиком от сервера при его изменении (команда 56 + Owner)
                         // Size             VT_UI2
-                        size = data.readUInt16LE(offset);
+                        // let size = data.readUInt16LE(offset);
                         offset += 2;
                         // Flag             VT_UI1
-                        flags = data.readUInt8(offset++);
+                        let flags = data.readUInt8(offset++);
                         // Id или Number    VT_STRING или VT_UI4
+                        let channelName;
                         if(flags & 1) {
                             // Number
                             channelName = this._channelNameByNumber(data.readUInt32LE(offset));
@@ -620,7 +766,7 @@ class LMClient extends EventEmitter {
                             // если канал не найден, то его имя будет null
                         } else {
                             // Id
-                            channelNameLen = data.readUInt16LE(offset);
+                            let channelNameLen = data.readUInt16LE(offset);
                             offset += 2;
                             channelName = win1251toUtf8(data.toString('binary', offset, offset + channelNameLen));
                             offset += channelNameLen;
@@ -647,27 +793,29 @@ class LMClient extends EventEmitter {
                         // Owner            VT_I2
                         offset += 2;
                         break;
-                    case 59:
+                    }
+                    case 59: {
                         // получение описания канала со всеми атрибутами от сервера при его изменении кем-либо
-                        size = data.readUInt16LE(offset);
+                        let size = data.readUInt16LE(offset);
                         offset += 2;
                         //
                         offset += (size - 3);
                         break;
-                    case 60:
+                    }
+                    case 60: {
                         // ответ на регистрацию канала 2 на сервере, изменение активности канала на сервере
                         // Size             VT_UI2
-                        size = data.readUInt16LE(offset);
+                        // let size = data.readUInt16LE(offset);
                         offset += 2;
                         // Flag             VT_UI1
-                        flags = data.readUInt8(offset++);
+                        let flags = data.readUInt8(offset++);
                         // Id               VT_STRING
-                        channelNameLen = data.readUInt16LE(offset);
+                        let channelNameLen = data.readUInt16LE(offset);
                         offset += 2;
-                        channelName = win1251toUtf8(data.toString('binary', offset, offset + channelNameLen));
+                        let channelName = win1251toUtf8(data.toString('binary', offset, offset + channelNameLen));
                         offset += channelNameLen;
                         // Number           VT_UI4
-                        channelNumber = data.readUInt32LE(offset);
+                        let channelNumber = data.readUInt32LE(offset);
                         offset += 4;
                         // AttributeCount   VT_UI2
                         var attrCount = data.readUInt16LE(offset);
@@ -715,21 +863,24 @@ class LMClient extends EventEmitter {
                         }
                         //
                         break;
-                    case 63:
+                    }
+                    case 63: {
                         // ответ на запрос данных сервера в произвольном формате
-                        size = data.readUInt16LE(offset);
+                        let size = data.readUInt16LE(offset);
                         offset += 2;
                         //
                         offset += (size - 3);
                         break;
-                    case 66:
+                    }
+                    case 66: {
                         // ответ на удаление канала / удаление атрибута / изменение активности канала / изменение маски групп каналов
-                        size = data.readUInt16LE(offset);
+                        let size = data.readUInt16LE(offset);
                         offset += 2;
                         //
                         offset += (size - 3);
                         break;
-                    case 100:
+                    }
+                    case 100: {
                         // ответ на запрос статуса
                         // Error            VT_UI2
                         // An               VT_UI2
@@ -741,12 +892,14 @@ class LMClient extends EventEmitter {
                             this.waitStatus = 0;
                         }
                         break;
-                    default:
+                    }
+                    default: {
                         // какая-то непонятная команда
-                        size = data.readUInt16LE(offset);
+                        let size = data.readUInt16LE(offset);
                         offset += 2;
                         //
                         offset += (size - 3);
+                    }
                 }
             }
         } catch(error) {
@@ -756,6 +909,7 @@ class LMClient extends EventEmitter {
     }
     /**
      * Отправка структуры регистрации
+     * @private
      */
     _sendRegisterStruct() {
         // Cmd:         UI1     42
@@ -782,6 +936,7 @@ class LMClient extends EventEmitter {
     }
     /**
      * Запуск процедуры проверки связи с сервером
+     * @private
      */
     _checkConnection() {
         if(this.waitStatus) {
@@ -797,6 +952,7 @@ class LMClient extends EventEmitter {
     }
     /**
      * Отправка запроса статуса
+     * @private
      */
     _sendRequestStatus() {
         // Cmd:         UI1     18
@@ -807,6 +963,7 @@ class LMClient extends EventEmitter {
     }
     /**
      * Отправка всего: регистрация каналов, значений, атрибутов...
+     * @private
      */
     _sendAll() {
         Object.keys(this.channels).forEach(name => {
@@ -825,6 +982,7 @@ class LMClient extends EventEmitter {
     }
     /**
      * Регистрация канала на сервере
+     * @private
      * @param {Сhannel2} channel регистрируемый канал
      */
     _registerChannel(channel) {
@@ -871,6 +1029,7 @@ class LMClient extends EventEmitter {
     }
     /**
      * Отправка канала на сервер
+     * @private
      * @param {Channel2} channel 
      */
     _sendChannel(channel) {
@@ -916,6 +1075,7 @@ class LMClient extends EventEmitter {
     }
     /**
      * Создание объекта атрибута канала
+     * @private
      * @param {number} id - идентификатор атрибута
      * @param {*} value - значение атрибута
      * @returns {Attribute}
@@ -930,6 +1090,7 @@ class LMClient extends EventEmitter {
     }
     /**
      * Запись атрибута в буфер
+     * @private
      * @param {Attribute} attr - атрибут
      * @returns {Buffer}
      */
@@ -949,6 +1110,7 @@ class LMClient extends EventEmitter {
     }
     /**
      * Чтение значения переменного типа из буфера
+     * @private
      * @param {Buffer} buf - буфер
      * @param {number} offset - смещение в буфере
      * @returns {VarType} 
@@ -983,6 +1145,7 @@ class LMClient extends EventEmitter {
     }
     /**
      * Чтение простого типа данных (не массива) из буфера
+     * @private
      * @param {Buffer} buf - буфер
      * @param {number} offset - смещение в буфере
      * @param {number} type - тип данных
@@ -993,55 +1156,67 @@ class LMClient extends EventEmitter {
         let result = {};
         //
         switch(type) {
-            case VT_EMPTY:
+            case VT_EMPTY: {
                 result.value = null;
                 break;
-            case VT_I2:
+            }
+            case VT_I2: {
                 result.value = buf.readInt16LE(offset);
                 offset += 2;
                 break;
-            case VT_I4:
+            }
+            case VT_I4: {
                 result.value = buf.readInt32LE(offset);
                 offset += 4;
                 break;
-            case VT_R4:
+            }
+            case VT_R4: {
                 result.value = buf.readFloatLE(offset);
                 offset += 4;
                 break;
-            case VT_R8:
+            }
+            case VT_R8: {
                 result.value = buf.readDoubleLE(offset);
                 offset += 8;
                 break;
-            case VT_DATE:
+            }
+            case VT_DATE: {
                 result.value = this._dateTimeToDate(buf.readDoubleLE(offset));
                 offset += 8;
                 break;
-            case VT_BOOL:
+            }
+            case VT_BOOL: {
                 result.value = buf.readInt16LE(offset) == -1;
                 offset += 2;
                 break;
-            case VT_I1:
+            }
+            case VT_I1: {
                 result.value = buf.readInt8(offset);
                 offset += 1;
                 break;
-            case VT_UI1:
+            }
+            case VT_UI1: {
                 result.value = buf.readUInt8(offset);
                 offset += 1;
                 break;
-            case VT_UI2:
+            }
+            case VT_UI2: {
                 result.value = buf.readUInt16LE(offset);
                 offset += 2;
                 break;
-            case VT_UI4:
+            }
+            case VT_UI4: {
                 result.value = buf.readUInt32LE(offset);
                 offset += 4;
                 break;
-            case VT_STRING:
+            }
+            case VT_STRING: {
                 let len = buf.readUInt16LE(offset);
                 offset += 2;
                 result.value = win1251toUtf8(buf.toString('binary', offset, offset + len));
                 offset += len;
                 break;
+            }
             default:
                 throw new Error('неподдерживаемый тип данных type:' + type);
         }
@@ -1050,6 +1225,7 @@ class LMClient extends EventEmitter {
     }
     /**
      * Запись значения переменного типа в буфер
+     * @private
      * @param {*} value значение
      * @param {number} type тип
      * @returns {Buffer}
@@ -1077,6 +1253,7 @@ class LMClient extends EventEmitter {
     }
     /**
      * Запись значения простого переменного типа (не массива) в буфер
+     * @private
      * @param {*} value значение
      * @param {number} type тип
      * @returns {Buffer}
@@ -1084,7 +1261,6 @@ class LMClient extends EventEmitter {
     _writeVarTypeValuePrimitive(value, type) {
         /** @type {Buffer} */
         var buf = Buffer.allocUnsafe(1024);
-        //
         var offset = 0;
         //
         switch(type) {
@@ -1132,7 +1308,6 @@ class LMClient extends EventEmitter {
                 offset += this._vt_string(value).copy(buf, offset);
                 break;
             default:
-                /** @todo поддержка массивов !!! */
                 throw new Error('неподдерживаемый тип данных type:' + type);
         }
         // возвращаем кусок буфера
@@ -1140,6 +1315,7 @@ class LMClient extends EventEmitter {
     }
     /**
      * Преобразование строки в ASCIIZ
+     * @private
      * @param {string} str строка
      * @param {number} len нужная длинна
      * @returns {string}
@@ -1153,6 +1329,7 @@ class LMClient extends EventEmitter {
     }
     /**
      * Запись строки в буфер в соответствии с форматом VT_STRING
+     * @private
      * @param {string} str строка
      * @returns {Buffer}
      */
@@ -1166,6 +1343,7 @@ class LMClient extends EventEmitter {
     }
     /**
      * Возвращает объект Date для указанной даты и времени с учетом time zone сервера
+     * @private
      * @param {number} serverDateTime время сервера в формате TDateTime
      * @returns {Date}
      */
@@ -1174,6 +1352,7 @@ class LMClient extends EventEmitter {
     }
     /**
      * Преобразование объекта Date в тип TDateTime
+     * @private
      * @param {Date} date объект
      * @returns {number}
      */
@@ -1182,6 +1361,7 @@ class LMClient extends EventEmitter {
     }
     /**
      * Возвращает имя канала по его номеру
+     * @private
      * @param {number} number номер канала
      * @returns {string}
      */
@@ -1202,6 +1382,10 @@ module.exports = {
     'stFailure':        stFailure,
     'stWrong':          stWrong,
     'stNotConnected':   stNotConnected,
+    'stTempOff':        stTempOff,
+    'stOff':            stOff,
+    'stBadConnection':  stBadConnection,
+    'stRegFailure':     stRegFailure,
     //
     'VT_EMPTY':         VT_EMPTY,
     'VT_I2':            VT_I2,
