@@ -348,7 +348,13 @@ class LMClient extends EventEmitter {
         this.serverTimeBias = 0;                    // смещение времени сервера
         this.reconnectTimer = null;                 // таймер повторных соединений
         this.checkConnTimer = null;                 // таймер проверки связи
-        this.checkConnectInterval = 480000;         // интервал проверки связи с сервером в мс
+        /**
+         * Интервал проверки связи с сервером в мс. 
+         * Значение по умолчанию 480000 мс (8 минут).
+         * @public
+         * @type {number}
+         */
+        this.checkConnectInterval = 480000;
         /**
          * ассоциативный массив каналов
          * @private
@@ -666,6 +672,11 @@ class LMClient extends EventEmitter {
                             this.emit('timeSynchronize', this._dateTimeToDate(serverDateTime));
                             // установка таймера проверки соединения
                             this.checkConnTimer = setInterval(() => this._checkConnection(), this.checkConnectInterval);
+                            //
+                            if(this.options.client) {
+                                // запрос всех каналов
+                                this._sendRequestAllChannels();
+                            }
                             // передача каналов на сервер
                             this._sendAll();
                         } else {
@@ -694,10 +705,13 @@ class LMClient extends EventEmitter {
                     }
                     case 53: {
                         // ответ на запрос всех каналов (начало)
-                        let size = data.readUInt16LE(offset);
+                        // let size = data.readUInt16LE(offset);
                         offset += 2;
                         //
-                        offset += (size - 3);
+                        let tagCount = data.readUInt32LE(offset);
+                        offset += 4;
+                        console.log('tagCount: ' + tagCount);
+                        //
                         break;
                     }
                     case 54: {
@@ -922,14 +936,22 @@ class LMClient extends EventEmitter {
         // Reserved:    UI1[7]  должны быть 0
         var buf = Buffer.alloc(72);
         //
-        var offset = buf.writeUInt8(42, 0);
-        offset = buf.writeUInt8(2, offset);
+        let offset = buf.writeUInt8(42, 0);
+        //
+        let role = 0;
+        if(this.options.opros) role += 2;
+        if(this.options.client) role += 4;
+        offset = buf.writeUInt8(role, offset);
+        //
         buf.write(this._asciiz(this.options.login, 40), offset, 40, 'ascii');
         offset += 40;
+        //
         buf.write(this._asciiz(this.options.password, 20), offset, 20, 'ascii');
         offset += 20;
+        //
         offset = buf.writeUInt8(clientHiVersion, offset);
         offset = buf.writeUInt8(clientLoVersion, offset);
+        //
         offset = buf.writeUInt8(0, offset);
         // передача
         this.socket.write(buf);
@@ -958,6 +980,21 @@ class LMClient extends EventEmitter {
         // Cmd:         UI1     18
         var buf = Buffer.allocUnsafe(1);
         buf.writeUInt8(18, 0);
+        // передача
+        this.socket.write(buf);
+    }
+    /**
+     * Отправка запроса описаний и значений всех каналов, используется в режиме клиента
+     * @private
+     */
+    _sendRequestAllChannels() {
+        // Cmd          UI1     52
+        // Size         UI2     4
+        // Regim        UI1     
+        var buf = Buffer.allocUnsafe(4);
+        buf.writeUInt8(52, 0);
+        buf.writeUInt16LE(4, 1);
+        buf.writeUInt8(1, 3);
         // передача
         this.socket.write(buf);
     }
