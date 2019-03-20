@@ -34,6 +34,15 @@
 ## Typedefs
 
 <dl>
+<dt><a href="#Channel2">Channel2</a> : <code>Object</code></dt>
+<dd><p>Канал сервера</p>
+</dd>
+<dt><a href="#Attribute">Attribute</a> : <code>Object</code></dt>
+<dd><p>Атрибут канала</p>
+</dd>
+<dt><a href="#Control">Control</a> : <code>Object</code></dt>
+<dd><p>Структура данных управления каналом</p>
+</dd>
 <dt><a href="#ConnectOptions">ConnectOptions</a> : <code>Object</code></dt>
 <dd><p>Параметры подключения к серверу</p>
 </dd>
@@ -52,14 +61,18 @@
 
 * [LMClient](#LMClient)
     * [new LMClient(options)](#new_LMClient_new)
+    * [.inbuf](#LMClient+inbuf) : <code>Buffer</code>
     * [.loggedIn](#LMClient+loggedIn) : <code>boolean</code>
     * [.connected](#LMClient+connected) : <code>boolean</code>
     * [.checkConnectInterval](#LMClient+checkConnectInterval) : <code>number</code>
+    * [.channels](#LMClient+channels) : <code>Object.&lt;string, Channel2&gt;</code>
     * [.connect()](#LMClient+connect)
     * [.disconnect()](#LMClient+disconnect)
     * [.addChannel(name, type, writeEnable, options)](#LMClient+addChannel) ⇒ <code>boolean</code>
     * [.setValue(name, value)](#LMClient+setValue) ⇒ <code>boolean</code>
     * [.setQuality(name, quality)](#LMClient+setQuality) ⇒ <code>boolean</code>
+    * [.sendControl(name, value)](#LMClient+sendControl) ⇒ <code>boolean</code>
+    * [._structSize(cmd)](#LMClient+_structSize) ⇒ <code>number</code>
     * ["connecting"](#LMClient+event_connecting)
     * ["connect"](#LMClient+event_connect)
     * ["disconnect"](#LMClient+event_disconnect)
@@ -67,6 +80,7 @@
     * ["checkConnection"](#LMClient+event_checkConnection)
     * ["timeSynchronize"](#LMClient+event_timeSynchronize)
     * ["control"](#LMClient+event_control)
+    * ["channel"](#LMClient+event_channel)
     * ["error"](#LMClient+event_error)
 
 <a name="new_LMClient_new"></a>
@@ -79,6 +93,10 @@
 | --- | --- | --- |
 | options | [<code>ConnectOptions</code>](#ConnectOptions) | Параметры подключения к серверу |
 
+<a name="LMClient+inbuf"></a>
+
+### lmClient.inbuf : <code>Buffer</code>
+**Kind**: instance property of [<code>LMClient</code>](#LMClient)  
 <a name="LMClient+loggedIn"></a>
 
 ### lmClient.loggedIn : <code>boolean</code>
@@ -100,6 +118,17 @@
 
 **Kind**: instance property of [<code>LMClient</code>](#LMClient)  
 **Access**: public  
+<a name="LMClient+channels"></a>
+
+### lmClient.channels : <code>Object.&lt;string, Channel2&gt;</code>
+Ассоциативный массив каналов. Элементы массива является экземплярами класса Channel2.Ключами в массиве является имена каналов.
+
+**Kind**: instance property of [<code>LMClient</code>](#LMClient)  
+**Access**: public  
+**Example**  
+```js
+// пример обращения к каналу по имени:var channel = lmclient.channels['my_channel_name'];// пример получения массива имен всех каналов:var names = Object.keys(lmclient.channels);// общее количество каналовvar count = names.length;    
+```
 <a name="LMClient+connect"></a>
 
 ### lmClient.connect()
@@ -132,7 +161,7 @@
 <a name="LMClient+setValue"></a>
 
 ### lmClient.setValue(name, value) ⇒ <code>boolean</code>
-Установка значения канала.Метод устанавливает значение для ранее созданного канала. Тип параметра value должен соответствовать типуканала указанному при его создании. Установленное значение канала будет передано на сервер. Кроме того, методустанавливает свойство канала quality (качество) в значение stOk.Метод возвращает значение false если канал с указанным именем не найден.
+Установка значения канала.Метод устанавливает значение для ранее созданного канала. Тип и значение параметра value должен соответствовать типуканала указанному при его создании. Установленное значение канала будет передано на сервер. Кроме того, методустанавливает свойство канала quality (качество) в значение stOk. Установка значения возможна только для типа учетной записи "опрос".Метод возвращает значение false если канал с указанным именем не найден или указан некорректный тип учетной записи.
 
 **Kind**: instance method of [<code>LMClient</code>](#LMClient)  
 **Access**: public  
@@ -145,7 +174,7 @@
 <a name="LMClient+setQuality"></a>
 
 ### lmClient.setQuality(name, quality) ⇒ <code>boolean</code>
-Установка качества канала.
+Установка качества канала.Метод устанавливает значение свойства качество для ранее созданного канала. Установка значения качества канала возможна толькопри подключении к серверу с типом учетной записи "опрос". Значение качества канала stOk автоматически устанавливается при установкезначения канала методом setValue(name, value) и отдельно устанавливать его не требуется.Метод возвращает значение false если канал с указанным именем не найден, указано некорректное значение качества или тип учетной записи.
 
 **Kind**: instance method of [<code>LMClient</code>](#LMClient)  
 **Access**: public  
@@ -154,6 +183,29 @@
 | --- | --- | --- |
 | name | <code>string</code> | Имя канала |
 | quality | <code>number</code> | Новое значение качества |
+
+<a name="LMClient+sendControl"></a>
+
+### lmClient.sendControl(name, value) ⇒ <code>boolean</code>
+Формирование команды управления каналом для типа учетной записи "опрос"
+
+**Kind**: instance method of [<code>LMClient</code>](#LMClient)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| name | <code>string</code> | Имя канала |
+| value | <code>\*</code> | Значение команды управления |
+
+<a name="LMClient+_structSize"></a>
+
+### lmClient.\_structSize(cmd) ⇒ <code>number</code>
+Возвращает размер структуры команды по номеру.Результат 0 означает, что размер структуры присутствует в самой структуре
+
+**Kind**: instance method of [<code>LMClient</code>](#LMClient)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| cmd | <code>number</code> | идентификатор команды |
 
 <a name="LMClient+event_connecting"></a>
 
@@ -233,15 +285,24 @@
 
 | Name | Type | Description |
 | --- | --- | --- |
-| control | <code>Object</code> | полученная команда управления каналом |
-| control.name | <code>string</code> | имя канала для которого пришла команда управления |
-| control.value | <code>\*</code> | новое значение канала |
-| control.dt | <code>Date</code> | метка времени |
+| control | [<code>Control</code>](#Control) | полученная команда управления каналом |
 
 **Example**  
 ```js
-client.on('control', function(control){  console.log('receive channel "' + control.name + '" value="' + control.value + '"');  client.setValue(control.name, control.value); // подтверждаем прием});
+client.on('control', function(control){  console.log('receive control "' + control.name + '" value="' + control.value + '"');  client.setValue(control.name, control.value); // подтверждаем прием});
 ```
+<a name="LMClient+event_channel"></a>
+
+### "channel"
+Событие формируется при получении клиентом от сервера нового значения канала. При отключении от сервера событие формируется для всех ранее полученныхот него каналов с установленным свойством quality в значение stOff.Событие используется при работе в режиме учетной записи "клиент".
+
+**Kind**: event emitted by [<code>LMClient</code>](#LMClient)  
+**Properties**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| channel | [<code>Channel2</code>](#Channel2) | объект состояние канала |
+
 <a name="LMClient+event_error"></a>
 
 ### "error"
@@ -253,6 +314,61 @@ client.on('control', function(control){  console.log('receive channel "' + cont
 | Name | Type | Description |
 | --- | --- | --- |
 | error | <code>Error</code> | ошибка |
+
+<a name="Channel2"></a>
+
+## Channel2 : <code>Object</code>
+Канал сервера
+
+**Kind**: global typedef  
+**Properties**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| name | <code>string</code> | наименование |
+| number | <code>number</code> | числовой идентификатор на сервере |
+| type | <code>number</code> | тип |
+| value | <code>\*</code> | значение |
+| quality | <code>number</code> | качество |
+| dt | <code>Date</code> | время изменения |
+| needRegister | <code>boolean</code> | необходимо зарегистрировать |
+| needSend | <code>boolean</code> | необходимо передать |
+| active | <code>boolean</code> | активен |
+| writeEnable | <code>boolean</code> | разрешение записи |
+| saveServer | <code>boolean</code> | сохранять значение на сервере при откоючении источника |
+| attributes | <code>Object.&lt;number, Attribute&gt;</code> | массив атрибутов |
+| creator | <code>number</code> | идентификатор создателя канала |
+| owner | <code>number</code> | источник значения для канала |
+| groups | <code>number</code> | принадлежность группам каналов |
+
+<a name="Attribute"></a>
+
+## Attribute : <code>Object</code>
+Атрибут канала
+
+**Kind**: global typedef  
+**Properties**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| id | <code>number</code> | идентификатор |
+| value | <code>\*</code> | значение |
+| dt | <code>Date</code> | дата изменения |
+| fromServer | <code>boolean</code> | получен от сервера |
+
+<a name="Control"></a>
+
+## Control : <code>Object</code>
+Структура данных управления каналом
+
+**Kind**: global typedef  
+**Properties**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| name | <code>string</code> | имя канала для которого пришла команда управления |
+| value | <code>\*</code> | полученное значение команды |
+| dt | <code>Date</code> | метка времени |
 
 <a name="ConnectOptions"></a>
 
@@ -270,7 +386,7 @@ client.on('control', function(control){  console.log('receive channel "' + cont
 | password | <code>string</code> | пароль |
 | reconnect | <code>boolean</code> | автоматически переподключаться при ошибках и разрывах связи |
 | opros | <code>boolean</code> | тип учетной записи "опрос" |
-| client | <code>boolean</code> | тип учетной записи "клиент" (пока не поддерживается) |
+| client | <code>boolean</code> | тип учетной записи "клиент" (пока поддерживается не полностью) |
 
 <a name="ChannelOptions"></a>
 

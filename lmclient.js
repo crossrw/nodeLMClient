@@ -151,9 +151,8 @@ validAttributes[ATTR_TARIFNUMBER]        = VT_UI4;
 validAttributes[ATTR_UNITNUMBER]         = VT_UI4;
 
 /**
- * Канал сервера (тип2)
- * @private
- * @typedef {Object} Сhannel2
+ * Канал сервера
+ * @typedef {Object} Channel2
  * @property {string} name - наименование
  * @property {number} number - числовой идентификатор на сервере
  * @property {number} type - тип
@@ -165,16 +164,25 @@ validAttributes[ATTR_UNITNUMBER]         = VT_UI4;
  * @property {boolean} active - активен
  * @property {boolean} writeEnable - разрешение записи
  * @property {boolean} saveServer - сохранять значение на сервере при откоючении источника
- * @property {Object}  attributes - массив атрибутов
+ * @property {Object.<number, Attribute>} attributes - массив атрибутов    
+ * @property {number} creator - идентификатор создателя канала
+ * @property {number} owner - источник значения для канала
+ * @property {number} groups - принадлежность группам каналов
  */
 /**
- * Атрибут канал (тип2)
- * @private
+ * Атрибут канала
  * @typedef {Object} Attribute
  * @property {number} id - идентификатор
  * @property {*} value - значение
  * @property {Date} dt - дата изменения
  * @property {boolean} fromServer - получен от сервера
+ */
+/**
+ * Структура данных управления каналом
+ * @typedef {Object} Control
+ * @property {string} name - имя канала для которого пришла команда управления
+ * @property {*} value - полученное значение команды
+ * @property {Date} dt - метка времени
  */
 /**
  * Значение переменного типа
@@ -193,7 +201,7 @@ validAttributes[ATTR_UNITNUMBER]         = VT_UI4;
  * @property {string} password - пароль
  * @property {boolean} reconnect - автоматически переподключаться при ошибках и разрывах связи
  * @property {boolean} opros - тип учетной записи "опрос"
- * @property {boolean} client - тип учетной записи "клиент" (пока не поддерживается)
+ * @property {boolean} client - тип учетной записи "клиент" (пока поддерживается не полностью)
  */
 /**
  * Параметры задаваемые при создании канала
@@ -279,15 +287,19 @@ function win1251toUtf8(s) {
  * Событие формируется при получении от сервера команды записи в канал управления. Для подтверждения получения и обработки этого события
  * необходимо установить полученное значение канала вызовом setValue(name, value).
  * @example
- * client.on('data', function(control){
- *   console.log('receive channel "' + control.name + '" value="' + control.value + '"');
+ * client.on('control', function(control){
+ *   console.log('receive control "' + control.name + '" value="' + control.value + '"');
  *   client.setValue(control.name, control.value); // подтверждаем прием
  * });
- * @event LMClient#data
- * @property {Object} control - полученная команда управления каналом
- * @property {string} control.name - имя канала для которого пришла команда управления
- * @property {*} control.value - новое значение канала
- * @property {Date} control.dt - метка времени
+ * @event LMClient#control
+ * @property {Control} control - полученная команда управления каналом
+ */
+/**
+ * Событие формируется при получении клиентом от сервера нового значения канала. При отключении от сервера событие формируется для всех ранее полученных
+ * от него каналов с установленным свойством quality в значение stOff.
+ * Событие используется при работе в режиме учетной записи "клиент".
+ * @event LMClient#channel
+ * @property {Channel2} channel - объект состояние канала
 */
 /**
  * Событие формируется при возникновении ошибки. Программа должна содержать обработчик этого события.
@@ -302,7 +314,7 @@ function win1251toUtf8(s) {
  * @fires LMClient#loggedIn
  * @fires LMClient#checkConnection
  * @fires LMClient#timeSynchronize
- * @fires LMClient#data
+ * @fires LMClient#control
  * @fires LMClient#error
  */
 class LMClient extends EventEmitter {
@@ -327,6 +339,8 @@ class LMClient extends EventEmitter {
         }, options);
         //
         this.socket = null;
+        /** @type {Buffer} */
+        this.inbuf = Buffer.allocUnsafe(0);         // приемный буфер
         //
         this.waitStatus = 0;                        // признак ожидания запрошенного статуса
         /**
@@ -356,9 +370,17 @@ class LMClient extends EventEmitter {
          */
         this.checkConnectInterval = 480000;
         /**
-         * ассоциативный массив каналов
-         * @private
-         * @type {Object.<string, Сhannel2>}
+         * Ассоциативный массив каналов. Элементы массива является экземплярами класса Channel2.
+         * Ключами в массиве является имена каналов.
+         * @example
+         * // пример обращения к каналу по имени:
+         * var channel = lmclient.channels['my_channel_name'];
+         * // пример получения массива имен всех каналов:
+         * var names = Object.keys(lmclient.channels);
+         * // общее количество каналов
+         * var count = names.length;    
+         * @public
+         * @type {Object.<string, Channel2>}
          */
         this.channels = {};
         /**
@@ -425,15 +447,26 @@ class LMClient extends EventEmitter {
         Object.keys(this.channels).forEach(name => {
             /** @type {Channel2} */
             let channel = _this.channels[name];
-            channel.needRegister = true;
-            channel.needSend = ('value' in channel);
-            channel.active = false;
-            channel.number = -1;
+            if('creator' in channel) {
+                // канал полученный от сервера в режиме "клиент"
+                if(channel.quality != stOff) {
+                    channel.quality = stOff;
+                    this.emit('channel', channel);
+                }
+            } else {
+                // канал созданный мной
+                channel.needRegister = true;
+                channel.needSend = ('value' in channel);
+                channel.active = false;
+                channel.number = -1;
+            }
         });
         // сброс номеров каналов
         this.channelsNumbers = {};
         // закрытие сокета
         this.socket.destroy();
+        // сброс приемного буфера
+        this._truncateInBuf();
     }
     /**
      * Добавление нового канала.
@@ -448,6 +481,8 @@ class LMClient extends EventEmitter {
      * @returns {boolean} 
      */
     addChannel(name, type, writeEnable, options = {}) {
+        // добавление каналов только в режиме опрос
+        if(!this.options.opros) return false;
         // проверка на корректность типа данных
         if(!validTypes.includes(type & VT_MASK)) return false;
         // проверка на дублирование имени
@@ -495,16 +530,18 @@ class LMClient extends EventEmitter {
     }
     /**
      * Установка значения канала.
-     * Метод устанавливает значение для ранее созданного канала. Тип параметра value должен соответствовать типу
+     * Метод устанавливает значение для ранее созданного канала. Тип и значение параметра value должен соответствовать типу
      * канала указанному при его создании. Установленное значение канала будет передано на сервер. Кроме того, метод
-     * устанавливает свойство канала quality (качество) в значение stOk.
-     * Метод возвращает значение false если канал с указанным именем не найден.
+     * устанавливает свойство канала quality (качество) в значение stOk. Установка значения возможна только для типа учетной записи "опрос".
+     * Метод возвращает значение false если канал с указанным именем не найден или указан некорректный тип учетной записи.
      * @public
      * @param {string} name Имя канала
      * @param {*} value Новое значение канала
      * @returns {boolean}
      */
     setValue(name, value) {
+        // установка значения только в режиме опрос
+        if(!this.options.opros) return false;
         // проверка на наличие канала
         if(!(name in this.channels)) return false;
         let channel = this.channels[name];
@@ -517,13 +554,11 @@ class LMClient extends EventEmitter {
                     // верхний и нижний диапазоны заданы
                     let minmax = channel.attributes[ATTR_EUInfo1].value;
                     if(Math.abs(channel.value - value) < Math.abs(minmax[0] - minmax[1])/100 * channel.attributes[ATTR_PERCENTDB].value) {
-                        // console.log('filtered1 ' + name + ' oldValue=' + channel.value + ' newValue=' + value);
                         return true;
                     }
                 } else {
                     // верхний и нижний диапазоны не заданы
                     if(Math.abs(channel.value - value) < Math.abs(channel.value/100 * channel.attributes[ATTR_PERCENTDB].value)) {
-                        // console.log('filtered2 ' + name + ' oldValue=' + channel.value + ' newValue=' + value);
                         return true;
                     }
                 }
@@ -543,6 +578,10 @@ class LMClient extends EventEmitter {
     }
     /**
      * Установка качества канала.
+     * Метод устанавливает значение свойства качество для ранее созданного канала. Установка значения качества канала возможна только
+     * при подключении к серверу с типом учетной записи "опрос". Значение качества канала stOk автоматически устанавливается при установке
+     * значения канала методом setValue(name, value) и отдельно устанавливать его не требуется.
+     * Метод возвращает значение false если канал с указанным именем не найден, указано некорректное значение качества или тип учетной записи.
      * @public
      * @param {string} name Имя канала
      * @param {number} quality Новое значение качества
@@ -565,6 +604,15 @@ class LMClient extends EventEmitter {
         return true;
     }
     /**
+     * Формирование команды управления каналом для типа учетной записи "опрос"
+     * @param {string} name Имя канала
+     * @param {*} value Значение команды управления
+     * @return {boolean}
+     */
+    sendControl(name, value) {
+        /** @todo */
+    }
+    /**
      * Отключение от сервера с последующим возможным повторным подключением
      * @private
      */
@@ -578,347 +626,499 @@ class LMClient extends EventEmitter {
     /**
      * Пришли данные от сервера
      * @private
-     * @param {Buffer} data буфер с данными
+     * @param {Buffer} data - буфер с данными
      */
     _onReceiveData(data) {
         // что-то пришло от сервера
-        // console.log('receive data length:' + data.length);
-//        var size = 0;
-        var offset = 0;
-        try {
-            while (offset < data.length) {
-                // читаю команду
-                var cmd = data.readUInt8(offset++);
-                // console.log('receive command:' + cmd);
-                switch(cmd) {
-                    case 2:
-                        // старый ответ на регистрацию
-                        offset += 15;
-                        break;
-                    case 7:
-                        // конфигурация A1
-                        offset += 52;
-                        break;
-                    case 8:
-                        // конфигурация A2
-                        offset += 54;
-                        break;
-                    case 9:
-                        // конфигурация A3
-                        offset += 56;
-                        break;
-                    case 10:
-                        // конфигурация A4 старая
-                        offset += 59;
-                        break;
-                    case 20:
-                        // информация о состоянии канала 1
-                        offset += 40;
-                        break;
-                    case 21:
-                        // управление каналом 1
-                        offset += 38;
-                        break;
-                    case 22: {
-                        // синхронизация времени
-                        // ServerTime       VT_DATE
-                        let serverDateTime = data.readDoubleLE(offset);
-                        offset += 8;
-                        // Reserved         VT_UI1[6]
-                        offset += 6;
-                        //
-                        this.emit('timeSynchronize', this._dateTimeToDate(serverDateTime));
-                        break;
+        // добавляем принятые данные в глобальный буфер
+        this.inbuf = Buffer.concat([this.inbuf, data]);
+        // указатель на начало очередной структуры
+        let offset = 0;
+        // цикл обработки структур
+        for(;;) {
+            if(this.inbuf.length <= offset) {
+                // в буфере ничего нового нет
+                this._truncateInBuf(offset);
+                return;
+            }
+            // читаем команду
+            let cmd = this.inbuf.readUInt8(offset);
+            // определяем размер структуры
+            let size = this._structSize(cmd);
+            if(size == 0) {
+                // размер структуры присутствует в самой структуре
+                if(this.inbuf.length < offset + 2) {
+                    this._truncateInBuf(offset);
+                    return;
+                }
+                // размер структуры
+                size = this.inbuf.readUInt16LE(offset + 1);
+            }
+            // проверка наличия в буфере очередной структуры ЦЕЛИКОМ
+            if(this.inbuf.length < offset + size) {
+                this._truncateInBuf(offset);
+                return;
+            }
+            // в буфере есть очередная структура ЦЕЛИКОМ
+            // console.log('receive cmd:' + cmd + ' size:' + size);
+            try {
+                this._parseCommand(this.inbuf, cmd, offset);
+                // выполнение разбора буфера может вызвать отключение от сервера, проверяем статус подключения
+                if(!this.connected) return;
+            } catch(error) {
+                this.emit('error', new Error('ошибка при разборе полученной структуры ' + cmd), error);
+                // this._disconnect();
+            }
+            // перенос указателя на начало следующей структуры
+            offset += size;
+        }
+    }
+    /**
+     * Обрезание обработанных команд во входном буфере.
+     * Если параметр offset не указан, то сбрасывает размер буфера до 0.
+     * @private
+     * @param {number} [offset] - смещение не обработанных команд
+     */
+    _truncateInBuf(offset) {
+        if(offset === undefined) offset = this.inbuf.length;
+        if(this.inbuf.length > 0) {
+            this.inbuf = this.inbuf.slice(offset);
+        }
+    }
+    /**
+     * Разбор очередной принятой структуры
+     * @private
+     * @param {Buffer} data - буфер с данными структуры
+     * @param {number} cmd - команда (она же находится в буфере по смещению offset)
+     * @param {number} offset - смещение в буфере
+     */
+    _parseCommand(data, cmd, offset) {
+        // пропускаем поле команды
+        offset++;
+        //
+        switch(cmd) {
+            case 2:
+                // старый ответ на регистрацию
+                break;
+            case 7:
+                // конфигурация A1
+                break;
+            case 8:
+                // конфигурация A2
+                break;
+            case 9:
+                // конфигурация A3
+                break;
+            case 10:
+                // конфигурация A4 старая
+                break;
+            case 20:
+                // информация о состоянии канала 1
+                break;
+            case 21:
+                // управление каналом 1
+                break;
+            case 22: {
+                // синхронизация времени
+                // ServerTime       VT_DATE
+                let serverDateTime = data.readDoubleLE(offset);
+                // Reserved         VT_UI1[6]
+                this.emit('timeSynchronize', this._dateTimeToDate(serverDateTime));
+                break;
+            }
+            case 23:
+                // извещение клиентам
+                // Message          VT_UI1
+                // Reserved         VT_UI1[3]
+                break;
+            case 34:
+                // конфигурация A4 новая
+                break;
+            case 43: {
+                // ответ на регистрацию клиента
+                // Id               VT_I4
+                let clientId = data.readInt32LE(offset);
+                offset += 4;
+                // Reserved1        VT_UI1
+                offset++;
+                // ServerTime       VT_DATE
+                let serverDateTime = data.readDoubleLE(offset);
+                offset += 8;
+                // HiVer            VT_UI1
+                let hiVer = data.readUInt8(offset++);
+                // LoVer            VT_UI1
+                let loVer = data.readUInt8(offset++);
+                // Reserved2        VT_UI2
+                // Reserved3        VT_UI2
+                offset += 4;
+                // RefusalReason    VT_UI1
+                let refusalReason = data.readUInt8(offset++);
+                // ServerTimeBias   VT_I2
+                this.serverTimeBias = data.readInt16LE(offset);
+                offset += 2;
+                // Reserved4        VT_UI2
+                offset += 2;
+                // разбор
+                if(refusalReason === 0) {
+                    // регистрация успешна
+                    this.loggedIn = true;
+                    this.emit('loggedIn', clientId, hiVer.toString(10) + '.' + loVer.toString(10));
+                    this.emit('timeSynchronize', this._dateTimeToDate(serverDateTime));
+                    // установка таймера проверки соединения
+                    this.checkConnTimer = setInterval(() => this._checkConnection(), this.checkConnectInterval);
+                    //
+                    if(this.options.client) {
+                        // запрос всех каналов
+                        this._sendRequestAllChannels();
                     }
-                    case 23:
-                        // извещение клиентам
-                        // Message          VT_UI1
-                        // Reserved         VT_UI1[3]
-                        offset += 4;
-                        break;
-                    case 34:
-                        // конфигурация A4 новая
-                        offset += 98;
-                        break;
-                    case 43: {
-                        // ответ на регистрацию клиента
-                        // Id               VT_I4
-                        let clientId = data.readInt32LE(offset);
-                        offset += 4;
-                        // Reserved1        VT_UI1
-                        offset++;
-                        // ServerTime       VT_DATE
-                        let serverDateTime = data.readDoubleLE(offset);
-                        offset += 8;
-                        // HiVer            VT_UI1
-                        let hiVer = data.readUInt8(offset++);
-                        // LoVer            VT_UI1
-                        let loVer = data.readUInt8(offset++);
-                        // Reserved2        VT_UI2
-                        // Reserved3        VT_UI2
-                        offset += 4;
-                        // RefusalReason    VT_UI1
-                        let refusalReason = data.readUInt8(offset++);
-                        // ServerTimeBias   VT_I2
-                        this.serverTimeBias = data.readInt16LE(offset);
-                        offset += 2;
-                        // Reserved4        VT_UI2
-                        offset += 2;
-                        // разбор
-                        if(refusalReason === 0) {
-                            // регистрация успешна
-                            this.loggedIn = true;
-                            this.emit('loggedIn', clientId, hiVer.toString(10) + '.' + loVer.toString(10));
-                            this.emit('timeSynchronize', this._dateTimeToDate(serverDateTime));
-                            // установка таймера проверки соединения
-                            this.checkConnTimer = setInterval(() => this._checkConnection(), this.checkConnectInterval);
-                            //
-                            if(this.options.client) {
-                                // запрос всех каналов
-                                this._sendRequestAllChannels();
-                            }
-                            // передача каналов на сервер
-                            this._sendAll();
-                        } else {
-                            // отказ в регистрации
-                            let msg;
-                            switch(refusalReason) {
-                                case 1:
-                                    msg = 'тип учетной записи на сервере не совпадает с запрошенным';
-                                    break;
-                                case 2:
-                                    msg = 'учетная запись уже подключена с другого адреса';
-                                    break;
-                                case 3:
-                                    msg = 'ресурсы учетной записи заняты';
-                                    break;
-                                case 4:
-                                    msg = 'неверный логин или пароль';
-                                    break;
-                                default:
-                                    msg = 'ошибка ' + refusalReason + 'при регистрации на сервере';
-                            }
-                            this.emit('error', new Error(msg));
-                            this._disconnect();
+                    // передача каналов на сервер
+                    this._sendAll();
+                } else {
+                    // отказ в регистрации
+                    let msg;
+                    switch(refusalReason) {
+                        case 1:
+                            msg = 'тип учетной записи на сервере не совпадает с запрошенным';
+                            break;
+                        case 2:
+                            msg = 'учетная запись уже подключена с другого адреса';
+                            break;
+                        case 3:
+                            msg = 'ресурсы учетной записи заняты';
+                            break;
+                        case 4:
+                            msg = 'неверный логин или пароль';
+                            break;
+                        default:
+                            msg = 'ошибка ' + refusalReason + 'при регистрации на сервере';
+                    }
+                    this.emit('error', new Error(msg));
+                    this._disconnect();
+                }
+                break;
+            }
+            case 53: {
+                // ответ на запрос всех каналов (получение количествоа каналов)
+                // Size             VT_UI2
+                // let size = data.readUInt16LE(offset);
+                // offset += 2;
+                // let tagCount = data.readUInt32LE(offset);
+                // offset += 4;
+                break;
+            }
+            case 54: {
+                // ответ на запрос всех каналов (продолжение)
+                /** @type {Channel2} */
+                let channel = {
+                    needRegister: false,
+                    needSend: false,
+                    attributes: {}
+                };
+                // Size             VT_UI2
+                // let size = data.readUInt16LE(offset);
+                offset += 2;
+                // Flags            VT_UI1      флаги
+                let flags = data.readUInt8(offset++);
+                channel.active = !!(flags&1);
+                channel.writeEnable = !!(flags&8);
+                channel.saveServer = !!(flags&16);
+                // Id               VT_STRING   имя канала
+                let channelNameLen = data.readUInt16LE(offset);
+                offset += 2;
+                channel.name = win1251toUtf8(data.toString('binary', offset, offset + channelNameLen));
+                offset += channelNameLen;
+                // Number           VT_UI4      идентификатор канала на сервере
+                channel.number = data.readUInt32LE(offset);
+                offset += 4;
+                // Creator          VT_I2       создатель канала
+                channel.creator = data.readInt16LE(offset);
+                offset += 2;
+                // Type             VT_UI2      тип данных канала
+                channel.type = data.readUInt16LE(offset);
+                offset += 2;
+                // AttributeCount   VT_UI2      количество атрибутов
+                let attrCount = data.readUInt16LE(offset);
+                offset += 2;
+                // Attributes       []          массив атрибутов
+                for(let i=0; i < attrCount; i++) {
+                    // чтение атрибута
+                    /** @type {Attribute} */
+                    let attr = {fromServer: true};
+                    // AttributeId      VT_UI2
+                    attr.id = data.readUInt16LE(offset);
+                    offset += 2;
+                    // AttributeType    VT_UI2
+                    // AttributeValue   VARTYPE
+                    let vtv = this._readVarTypeValue(data, offset);
+                    attr.value = vtv.value;
+                    offset += vtv.size;
+                    // Owner            VT_I2
+                    attr.owner = data.readInt16LE(offset);
+                    offset += 2;
+                    // AttributeDT      VT_R8
+                    attr.dt = this._dateTimeToDate(data.readDoubleLE(offset));
+                    offset += 8;
+                    // добавляем атрибут к каналу
+                    channel.attributes[attr.id] = attr;
+                }
+                // Owner            VT_I2       источник значения канала
+                channel.owner = data.readUInt16LE(offset);
+                offset += 2;
+                // TimeStamp        VT_R8       метка времени канала
+                channel.dt = this._dateTimeToDate(data.readDoubleLE(offset));
+                offset += 8;
+                // Quality          VT_UI1      качество канала
+                channel.quality = data.readUInt8(offset++);
+                // Value            VARTYPE     значение канала
+                let vt = this._readVarTypeValue(data, offset, channel.type);
+                channel.value = vt.value;
+                offset += vt.size;
+                // Groups           VT_UI4      принадлежность группам каналов
+                channel.groups = data.readUInt32LE(offset);
+                offset += 4;
+                // сохраняем канал
+                this.channels[channel.name] = channel;
+                this.channelsNumbers[channel.number] = channel.name;
+                // отправляем событие
+                this.emit('channel', channel);
+                //
+                break;
+            }
+            case 57: {
+                // получение состояния канала клиентом от сервера при его изменении или получение опросчиком команды управления
+                // Size             VT_UI2
+                // let size = data.readUInt16LE(offset);
+                offset += 2;
+                // Flag             VT_UI1
+                let flags = data.readUInt8(offset++);
+                let channelName;
+                // Id или Number    VT_STRING или VT_UI4
+                if(flags & 1) {
+                    // Number
+                    channelName = this._channelNameByNumber(data.readUInt32LE(offset));
+                    offset += 4;
+                } else {
+                    // Id
+                    let channelNameLen = data.readUInt16LE(offset);
+                    offset += 2;
+                    channelName = win1251toUtf8(data.toString('binary', offset, offset + channelNameLen));
+                    offset += channelNameLen;
+                }
+                // TimeStamp        VT_R8
+                let channelTime = this._dateTimeToDate(data.readDoubleLE(offset));
+                offset += 8;
+                // Quality          VT_UI1
+                let quality = data.readUInt8(offset++);
+                // Type             VT_UI2
+                // Value            VARTYPE
+                let cvt = this._readVarTypeValue(data, offset);
+                offset += cvt.size;
+                // Owner            VT_I2
+                let owner = data.readInt16LE(offset);
+                offset += 2;
+                // такой канал есть?
+                if(!(channelName in this.channels)) break;
+                if(flags & 8) {
+                    // пришла команда управления каналом
+                    if(quality == stOk) {
+                        // посыляем уведомление
+                        this.emit('control', {
+                            'name':     channelName,
+                            'value':    cvt.value,
+                            'dt':       channelTime,
+                        });
+                    }
+                } else {
+                    // пришло изменение состояния канала (режим клиент)
+                    let channel = this.channels[channelName];
+                    channel.value = cvt.value;
+                    channel.quality = quality;
+                    channel.dt = channelTime;
+                    channel.owner = owner;
+                    // посыляем уведомление
+                    this.emit('channel', channel);
+                }
+                //
+                break;
+            }
+            case 58: {
+                // получение состояния атрибута канала клиентом или опросчиком от сервера при его изменении (команда 56 + Owner)
+                // Size             VT_UI2
+                // let size = data.readUInt16LE(offset);
+                offset += 2;
+                // Flag             VT_UI1
+                let flags = data.readUInt8(offset++);
+                // Id или Number    VT_STRING или VT_UI4
+                let channelName;
+                if(flags & 1) {
+                    // Number
+                    channelName = this._channelNameByNumber(data.readUInt32LE(offset));
+                    offset += 4;
+                    // если канал не найден, то его имя будет null
+                } else {
+                    // Id
+                    let channelNameLen = data.readUInt16LE(offset);
+                    offset += 2;
+                    channelName = win1251toUtf8(data.toString('binary', offset, offset + channelNameLen));
+                    offset += channelNameLen;
+                }
+                // AttributeId      VT_UI2
+                let attrId = data.readUInt16LE(offset);
+                offset += 2;
+                // AttributeType    VT_UI2
+                let vtv = this._readVarTypeValue(data, offset);
+                offset += vtv.size;
+                // AttributeDT      VT_R8
+                let attrTime = this._dateTimeToDate(data.readDoubleLE(offset));
+                offset += 8;
+                // сохраняем атрибут
+                if(typeof channelName === 'string') {
+                    // если имя канала не null
+                    this.channels[channelName].attributes[attrId] = {
+                        'id':       attrId,
+                        'value':    vtv.value,
+                        'dt':       attrTime,
+                        'fromServer': true
+                    };
+                }
+                // Owner            VT_I2
+                offset += 2;
+                break;
+            }
+            case 59: {
+                /**
+                 * @todo получение описания канала со всеми атрибутами от сервера при его изменении кем-либо
+                 */
+                break;
+            }
+            case 60: {
+                // ответ на регистрацию канала 2 на сервере, изменение активности канала на сервере
+                // Size             VT_UI2
+                // let size = data.readUInt16LE(offset);
+                offset += 2;
+                // Flag             VT_UI1
+                let flags = data.readUInt8(offset++);
+                // Id               VT_STRING
+                let channelNameLen = data.readUInt16LE(offset);
+                offset += 2;
+                let channelName = win1251toUtf8(data.toString('binary', offset, offset + channelNameLen));
+                offset += channelNameLen;
+                // Number           VT_UI4
+                let channelNumber = data.readUInt32LE(offset);
+                offset += 4;
+                // AttributeCount   VT_UI2
+                var attrCount = data.readUInt16LE(offset);
+                offset += 2;
+                // Attributes
+                var recAttributes = [];
+                for(let i=0; i<attrCount; i++) {
+                    // идентификатор атрибута
+                    let attrId = data.readUInt16LE(offset);
+                    offset += 2;
+                    // тип значения атрибута
+                    let vtv = this._readVarTypeValue(data, offset);
+                    offset += vtv.size;
+                    // время атрибута
+                    let attrTime = this._dateTimeToDate(data.readDoubleLE(offset));
+                    offset += 8;
+                    // сохраняем атрибут
+                    recAttributes.push({
+                        'id':       attrId,
+                        'value':    vtv.value,
+                        'dt':       attrTime,
+                        'fromServer': true
+                    });
+                }
+                // разбор принятого
+                if(channelName in this.channels) {
+                    // такой канал у нас есть
+                    this.channelsNumbers[channelNumber] = channelName;
+                    let channel = this.channels[channelName];
+                    channel.number = channelNumber;
+                    let oldActive = channel.active;
+                    channel.active = !!(flags & 1);
+                    // записываем принятые атрибуты
+                    for(let i=0; i<recAttributes.length; i++) {
+                        channel.attributes[recAttributes[i].id] = recAttributes[i];
+                    }
+                    // проверка на смену активности
+                    if(channel.active && !oldActive) {
+                        if(channel.needSend) {
+                            // если появилась активность, то передаем значение канала
+                            this._sendChannel(channel);
+                            channel.needSend = false;
                         }
-                        break;
-                    }
-                    case 53: {
-                        // ответ на запрос всех каналов (начало)
-                        // let size = data.readUInt16LE(offset);
-                        offset += 2;
-                        //
-                        let tagCount = data.readUInt32LE(offset);
-                        offset += 4;
-                        console.log('tagCount: ' + tagCount);
-                        //
-                        break;
-                    }
-                    case 54: {
-                        // ответ на запрос всех каналов (продолжение)
-                        let size = data.readUInt16LE(offset);
-                        offset += 2;
-                        //
-                        offset += (size - 3);
-                        break;
-                    }
-                    case 57: {
-                        // получение состояния канала клиентом от сервера при его изменении или получение опросчиком команды управления
-                        // Size             VT_UI2
-                        // let size = data.readUInt16LE(offset);
-                        offset += 2;
-                        // Flag             VT_UI1
-                        let flags = data.readUInt8(offset++);
-                        let channelName;
-                        // Id или Number    VT_STRING или VT_UI4
-                        if(flags & 1) {
-                            // Number
-                            channelName = this._channelNameByNumber(data.readUInt32LE(offset));
-                            offset += 4;
-                        } else {
-                            // Id
-                            let channelNameLen = data.readUInt16LE(offset);
-                            offset += 2;
-                            channelName = win1251toUtf8(data.toString('binary', offset, offset + channelNameLen));
-                            offset += channelNameLen;
-                        }
-                        // TimeStamp        VT_R8
-                        let channelTime = this._dateTimeToDate(data.readDoubleLE(offset));
-                        offset += 8;
-                        // Quality          VT_UI1
-                        let quality = data.readUInt8(offset++);
-                        // Type             VT_UI2
-                        // Value            VARTYPE
-                        let cvt = this._readVarTypeValue(data, offset);
-                        offset += cvt.size;
-                        // Owner            VT_I2
-                        offset += 2;
-                        // отправляем уведомление
-                        if((channelName in this.channels) && (quality == stOk)) {
-                            this.emit('data', {
-                                'name':     channelName,
-                                'value':    cvt.value,
-                                'dt':       channelTime,
-                            });
-                        }
-                        //
-                        break;
-                    }
-                    case 58: {
-                        // получение состояния атрибута канала клиентом или опросчиком от сервера при его изменении (команда 56 + Owner)
-                        // Size             VT_UI2
-                        // let size = data.readUInt16LE(offset);
-                        offset += 2;
-                        // Flag             VT_UI1
-                        let flags = data.readUInt8(offset++);
-                        // Id или Number    VT_STRING или VT_UI4
-                        let channelName;
-                        if(flags & 1) {
-                            // Number
-                            channelName = this._channelNameByNumber(data.readUInt32LE(offset));
-                            offset += 4;
-                            // если канал не найден, то его имя будет null
-                        } else {
-                            // Id
-                            let channelNameLen = data.readUInt16LE(offset);
-                            offset += 2;
-                            channelName = win1251toUtf8(data.toString('binary', offset, offset + channelNameLen));
-                            offset += channelNameLen;
-                        }
-                        // AttributeId      VT_UI2
-                        let attrId = data.readUInt16LE(offset);
-                        offset += 2;
-                        // AttributeType    VT_UI2
-                        let vtv = this._readVarTypeValue(data, offset);
-                        offset += vtv.size;
-                        // AttributeDT      VT_R8
-                        let attrTime = this._dateTimeToDate(data.readDoubleLE(offset));
-                        offset += 8;
-                        // сохраняем атрибут
-                        if(typeof channelName === 'string') {
-                            // если имя канала не null
-                            this.channels[channelName].attributes[attrId] = {
-                                'id':       attrId,
-                                'value':    vtv.value,
-                                'dt':       attrTime,
-                                'fromServer': true
-                            };
-                        }
-                        // Owner            VT_I2
-                        offset += 2;
-                        break;
-                    }
-                    case 59: {
-                        // получение описания канала со всеми атрибутами от сервера при его изменении кем-либо
-                        let size = data.readUInt16LE(offset);
-                        offset += 2;
-                        //
-                        offset += (size - 3);
-                        break;
-                    }
-                    case 60: {
-                        // ответ на регистрацию канала 2 на сервере, изменение активности канала на сервере
-                        // Size             VT_UI2
-                        // let size = data.readUInt16LE(offset);
-                        offset += 2;
-                        // Flag             VT_UI1
-                        let flags = data.readUInt8(offset++);
-                        // Id               VT_STRING
-                        let channelNameLen = data.readUInt16LE(offset);
-                        offset += 2;
-                        let channelName = win1251toUtf8(data.toString('binary', offset, offset + channelNameLen));
-                        offset += channelNameLen;
-                        // Number           VT_UI4
-                        let channelNumber = data.readUInt32LE(offset);
-                        offset += 4;
-                        // AttributeCount   VT_UI2
-                        var attrCount = data.readUInt16LE(offset);
-                        offset += 2;
-                        // Attributes
-                        var recAttributes = [];
-                        for(let i=0; i<attrCount; i++) {
-                            // идентификатор атрибута
-                            let attrId = data.readUInt16LE(offset);
-                            offset += 2;
-                            // тип значения атрибута
-                            let vtv = this._readVarTypeValue(data, offset);
-                            offset += vtv.size;
-                            // время атрибута
-                            let attrTime = this._dateTimeToDate(data.readDoubleLE(offset));
-                            offset += 8;
-                            // сохраняем атрибут
-                            recAttributes.push({
-                                'id':       attrId,
-                                'value':    vtv.value,
-                                'dt':       attrTime,
-                                'fromServer': true
-                            });
-                        }
-                        // разбор принятого
-                        if(channelName in this.channels) {
-                            // такой канал у нас есть
-                            this.channelsNumbers[channelNumber] = channelName;
-                            let channel = this.channels[channelName];
-                            channel.number = channelNumber;
-                            let oldActive = channel.active;
-                            channel.active = !!(flags & 1);
-                            // записываем принятые атрибуты
-                            for(let i=0; i<recAttributes.length; i++) {
-                                channel.attributes[recAttributes[i].id] = recAttributes[i];
-                            }
-                            // проверка на смену активности
-                            if(channel.active && !oldActive) {
-                                if(channel.needSend) {
-                                    // если появилась активность, то передаем значение канала
-                                    this._sendChannel(channel);
-                                    channel.needSend = false;
-                                }
-                            }
-                        }
-                        //
-                        break;
-                    }
-                    case 63: {
-                        // ответ на запрос данных сервера в произвольном формате
-                        let size = data.readUInt16LE(offset);
-                        offset += 2;
-                        //
-                        offset += (size - 3);
-                        break;
-                    }
-                    case 66: {
-                        // ответ на удаление канала / удаление атрибута / изменение активности канала / изменение маски групп каналов
-                        let size = data.readUInt16LE(offset);
-                        offset += 2;
-                        //
-                        offset += (size - 3);
-                        break;
-                    }
-                    case 100: {
-                        // ответ на запрос статуса
-                        // Error            VT_UI2
-                        // An               VT_UI2
-                        // Reserve          VT_UI1[8]
-                        offset += 12;
-                        // если ожидаю ответа, то посылаю событие с задержкой
-                        if(this.waitStatus) {
-                            this.emit('checkConnection', Date.now() - this.waitStatus);
-                            this.waitStatus = 0;
-                        }
-                        break;
-                    }
-                    default: {
-                        // какая-то непонятная команда
-                        let size = data.readUInt16LE(offset);
-                        offset += 2;
-                        //
-                        offset += (size - 3);
                     }
                 }
+                //
+                break;
             }
-        } catch(error) {
-            this.emit('error', new Error('ошибка при разборе полученной структуры'), error);
-            this._disconnect();
+            case 61: {
+                /**
+                 * @todo удаление канала или атрибута
+                 */
+                break;
+            }
+            case 63: {
+                // ответ на запрос данных сервера в произвольном формате
+                break;
+            }
+            case 66: {
+                // ответ на удаление канала / удаление атрибута / изменение активности канала / изменение маски групп каналов
+                break;
+            }
+            case 100: {
+                // ответ на запрос статуса
+                // Error            VT_UI2
+                // An               VT_UI2
+                // Reserve          VT_UI1[8]
+                // если ожидаю ответа, то посылаю событие с задержкой
+                if(this.waitStatus) {
+                    this.emit('checkConnection', Date.now() - this.waitStatus);
+                    this.waitStatus = 0;
+                }
+                break;
+            }
+        }
+    }
+    /**
+     * Возвращает размер структуры команды по номеру.
+     * Результат 0 означает, что размер структуры присутствует в самой структуре
+     * @param {number} cmd - идентификатор команды
+     * @returns {number}
+     */
+    _structSize(cmd) {
+        switch (cmd) {
+            case 2:
+                return 16;
+            case 7:
+                return 53;
+            case 8:
+                return 55;
+            case 9:
+                return 57;
+            case 10:
+                return 60;
+            case 20:
+                return 41;
+            case 21:
+                return 39;
+            case 22:
+                return 15;
+            case 23:
+                return 5;
+            case 24:
+                return 1;
+            case 25:
+                return 10;
+            case 34:
+                return 99;
+            case 43:
+                return 25;
+            case 100:
+                return 13;
+            default:
+                return 0;
         }
     }
     /**
@@ -951,8 +1151,8 @@ class LMClient extends EventEmitter {
         //
         offset = buf.writeUInt8(clientHiVersion, offset);
         offset = buf.writeUInt8(clientLoVersion, offset);
-        //
-        offset = buf.writeUInt8(0, offset);
+        // флаги 00000100
+        offset = buf.writeUInt8(4, offset);
         // передача
         this.socket.write(buf);
     }
@@ -1020,7 +1220,7 @@ class LMClient extends EventEmitter {
     /**
      * Регистрация канала на сервере
      * @private
-     * @param {Сhannel2} channel регистрируемый канал
+     * @param {Channel2} channel регистрируемый канал
      */
     _registerChannel(channel) {
         // Cmd          UI1         51      команда
@@ -1150,13 +1350,21 @@ class LMClient extends EventEmitter {
      * @private
      * @param {Buffer} buf - буфер
      * @param {number} offset - смещение в буфере
+     * @param {number} [type] - тип (необязательный параметр), если не указан, то тип читается из буфера
      * @returns {VarType} 
      */
-    _readVarTypeValue(buf, offset) {
+    _readVarTypeValue(buf, offset, type) {
         let start = offset;
+        /** @type {VarType} */
         let result = {};
-        result.type = buf.readUInt16LE(offset);
-        offset += 2;
+        //
+        if(type === undefined) {
+            // если тип не указан, то читаем его из буфера
+            result.type = buf.readUInt16LE(offset);
+            offset += 2;
+        } else {
+            result.type = type;
+        }
         //
         if(result.type & VT_ARRAY) {
             // одномерный массив, читаем количество элементов
