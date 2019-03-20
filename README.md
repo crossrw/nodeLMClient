@@ -61,7 +61,6 @@
 
 * [LMClient](#LMClient)
     * [new LMClient(options)](#new_LMClient_new)
-    * [.inbuf](#LMClient+inbuf) : <code>Buffer</code>
     * [.loggedIn](#LMClient+loggedIn) : <code>boolean</code>
     * [.connected](#LMClient+connected) : <code>boolean</code>
     * [.checkConnectInterval](#LMClient+checkConnectInterval) : <code>number</code>
@@ -92,10 +91,6 @@
 | --- | --- | --- |
 | options | [<code>ConnectOptions</code>](#ConnectOptions) | Параметры подключения к серверу |
 
-<a name="LMClient+inbuf"></a>
-
-### lmClient.inbuf : <code>Buffer</code>
-**Kind**: instance property of [<code>LMClient</code>](#LMClient)  
 <a name="LMClient+loggedIn"></a>
 
 ### lmClient.loggedIn : <code>boolean</code>

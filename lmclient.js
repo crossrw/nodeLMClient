@@ -339,8 +339,12 @@ class LMClient extends EventEmitter {
         }, options);
         //
         this.socket = null;
-        /** @type {Buffer} */
-        this.inbuf = Buffer.allocUnsafe(0);         // приемный буфер
+        /** 
+         * приемный буфер
+         * @private
+         * @type {Buffer}
+         * */
+        this.inbuf = Buffer.allocUnsafe(0);
         //
         this.waitStatus = 0;                        // признак ожидания запрошенного статуса
         /**
