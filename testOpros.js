@@ -33,8 +33,8 @@ client.on('timeSynchronize', function(time){
 client.on('disconnect', function(){
     console.log('disconnected');
 });
-client.on('data', function(ch){
-    console.log('receive channel "' + ch.name + '" value="' + ch.value + '"');
+client.on('control', function(ch){
+    console.log('receive control "' + ch.name + '" value="' + ch.value + '"');
     // подтверждаем прием
     client.setValue(ch.name, ch.value);
 });
@@ -66,6 +66,8 @@ client.addChannel('channel_aVT_I4', lm.VT_I4 + lm.VT_ARRAY, false, {
 // проверка активизации канала
 client.addChannel('channel_active', lm.VT_I1, false);
 client.setValue('channel_active', 10);
+// проверка управления каналом
+client.addChannel('channel_write', lm.VT_I4, true);
 
 // подключаемся к серверу
 client.connect();
