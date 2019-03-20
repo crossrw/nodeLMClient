@@ -72,7 +72,6 @@
     * [.setValue(name, value)](#LMClient+setValue) ⇒ <code>boolean</code>
     * [.setQuality(name, quality)](#LMClient+setQuality) ⇒ <code>boolean</code>
     * [.sendControl(name, value)](#LMClient+sendControl) ⇒ <code>boolean</code>
-    * [._structSize(cmd)](#LMClient+_structSize) ⇒ <code>number</code>
     * ["connecting"](#LMClient+event_connecting)
     * ["connect"](#LMClient+event_connect)
     * ["disconnect"](#LMClient+event_disconnect)
@@ -195,17 +194,6 @@
 | --- | --- | --- |
 | name | <code>string</code> | Имя канала |
 | value | <code>\*</code> | Значение команды управления |
-
-<a name="LMClient+_structSize"></a>
-
-### lmClient.\_structSize(cmd) ⇒ <code>number</code>
-Возвращает размер структуры команды по номеру.Результат 0 означает, что размер структуры присутствует в самой структуре
-
-**Kind**: instance method of [<code>LMClient</code>](#LMClient)  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| cmd | <code>number</code> | идентификатор команды |
 
 <a name="LMClient+event_connecting"></a>
 
