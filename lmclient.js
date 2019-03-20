@@ -191,9 +191,9 @@ validAttributes[ATTR_UNITNUMBER]         = VT_UI4;
  * @property {number} port - номер TCP порта
  * @property {string} login - логин
  * @property {string} password - пароль
- * @property {string} reconnect - автоматически переподключаться при ошибках и разрывах связи
- * @property {string} opros - тип учетной записи "опрос"
- * @property {string} client - тип учетной записи "клиент" (пока не поддерживается)
+ * @property {boolean} reconnect - автоматически переподключаться при ошибках и разрывах связи
+ * @property {boolean} opros - тип учетной записи "опрос"
+ * @property {boolean} client - тип учетной записи "клиент" (пока не поддерживается)
  */
 /**
  * Параметры задаваемые при создании канала
