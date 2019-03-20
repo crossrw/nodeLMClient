@@ -4,7 +4,7 @@
 
 Библиотека предназначена для организации подключения к серверу SCADA системы LanMon из программ написанных на языке js.
 
-Более подробное описание SCADA системы LanMon можно получить по адресу <https://www.mnppsaturn.ru/?topic_id=3&good_id=184>.
+Более подробное описание SCADA системы LanMon можно получить на [сайте МНПП "Сатурн"](https://www.mnppsaturn.ru/?topic_id=3&good_id=184).
 
 Основные функции библиотеки:
 
@@ -45,16 +45,16 @@
 <a name="LMClient"></a>
 
 ## LMClient
-
 Класс клиента сервера LM
 
 **Kind**: global class  
-**Emits**: [<code>connecting</code>](#LMClient+event_connecting), [<code>connect</code>](#LMClient+event_connect), [<code>disconnect</code>](#LMClient+event_disconnect), [<code>loggedIn</code>](#LMClient+event_loggedIn), [<code>checkConnection</code>](#LMClient+event_checkConnection), [<code>timeSynchronize</code>](#LMClient+event_timeSynchronize), [<code>data</code>](#LMClient+event_data), [<code>error</code>](#LMClient+event_error)  
+**Emits**: [<code>connecting</code>](#LMClient+event_connecting), [<code>connect</code>](#LMClient+event_connect), [<code>disconnect</code>](#LMClient+event_disconnect), [<code>loggedIn</code>](#LMClient+event_loggedIn), [<code>checkConnection</code>](#LMClient+event_checkConnection), [<code>timeSynchronize</code>](#LMClient+event_timeSynchronize), [<code>control</code>](#LMClient+event_control), [<code>error</code>](#LMClient+event_error)  
 
 * [LMClient](#LMClient)
     * [new LMClient(options)](#new_LMClient_new)
     * [.loggedIn](#LMClient+loggedIn) : <code>boolean</code>
     * [.connected](#LMClient+connected) : <code>boolean</code>
+    * [.checkConnectInterval](#LMClient+checkConnectInterval) : <code>number</code>
     * [.connect()](#LMClient+connect)
     * [.disconnect()](#LMClient+disconnect)
     * [.addChannel(name, type, writeEnable, options)](#LMClient+addChannel) ⇒ <code>boolean</code>
@@ -66,16 +66,14 @@
     * ["loggedIn"](#LMClient+event_loggedIn)
     * ["checkConnection"](#LMClient+event_checkConnection)
     * ["timeSynchronize"](#LMClient+event_timeSynchronize)
-    * ["data"](#LMClient+event_data)
+    * ["control"](#LMClient+event_control)
     * ["error"](#LMClient+event_error)
 
 <a name="new_LMClient_new"></a>
 
 ### new LMClient(options)
+Конструктор класса.Создает новый экземпляр класса подключения к серверу. В параметрах конструктора указываютсянастройки используемые при подключении к серверу.
 
-Конструктор класса.
-Создает новый экземпляр класса подключения к серверу. В параметрах конструктора указываются
-настройки используемые при подключении к серверу.
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -84,50 +82,42 @@
 <a name="LMClient+loggedIn"></a>
 
 ### lmClient.loggedIn : <code>boolean</code>
-
-Текущее состояние регистрации на сервере.
-Значение true соответствует тому, что клиент успешно подключен и зарегестрирован на сервере.
+Текущее состояние регистрации на сервере.Значение true соответствует тому, что клиент успешно подключен и зарегестрирован на сервере.
 
 **Kind**: instance property of [<code>LMClient</code>](#LMClient)  
 **Access**: public  
 <a name="LMClient+connected"></a>
 
 ### lmClient.connected : <code>boolean</code>
+Текущее состояние подключения к серверу.Значение true соответствует тому, что клиент установил соединение с сервером. Состояние регистрации можнопроконтролировать через свойство loggedIn.
 
-Текущее состояние подключения к серверу.
-Значение true соответствует тому, что клиент установил соединение с сервером. Состояние регистрации можно
-проконтролировать через свойство loggedIn.
+**Kind**: instance property of [<code>LMClient</code>](#LMClient)  
+**Access**: public  
+<a name="LMClient+checkConnectInterval"></a>
+
+### lmClient.checkConnectInterval : <code>number</code>
+Интервал проверки связи с сервером в мс. Значение по умолчанию 480000 мс (8 минут).
 
 **Kind**: instance property of [<code>LMClient</code>](#LMClient)  
 **Access**: public  
 <a name="LMClient+connect"></a>
 
 ### lmClient.connect()
-
-Подключение и регистрация на сервере LM.
-Метод начинает процедуру подключения и регистрации к серверу системы LanMon. При подключении используются
-параметры указанные при создании класса. Если в параметрах указано значение reconnect: true, то соединение
-будет автоматически восстанавливаться в случаях обрыва связи или ошибок.
+Подключение и регистрация на сервере LM.Метод начинает процедуру подключения и регистрации к серверу системы LanMon. При подключении используютсяпараметры указанные при создании класса. Если в параметрах указано значение reconnect: true, то соединениебудет автоматически восстанавливаться в случаях обрыва связи или ошибок.
 
 **Kind**: instance method of [<code>LMClient</code>](#LMClient)  
 **Access**: public  
 <a name="LMClient+disconnect"></a>
 
 ### lmClient.disconnect()
-
-Отключиться от сервера.
-Метод разрывает соединение с сервером если оно было ранее установлено вызовом метода connect().
+Отключиться от сервера.Метод разрывает соединение с сервером если оно было ранее установлено вызовом метода connect().
 
 **Kind**: instance method of [<code>LMClient</code>](#LMClient)  
 **Access**: public  
 <a name="LMClient+addChannel"></a>
 
 ### lmClient.addChannel(name, type, writeEnable, options) ⇒ <code>boolean</code>
-
-Добавление нового канала.
-Метод добавляет новый канал для регистрации и передачи данных на сервер.
-Метод возвращает значение false если канал с указанным именем уже существует или
-если указан некорректный тип данных.
+Добавление нового канала.Метод добавляет новый канал для регистрации и передачи данных на сервер.Метод возвращает значение false если канал с указанным именем уже существует илиесли указан некорректный тип данных.
 
 **Kind**: instance method of [<code>LMClient</code>](#LMClient)  
 **Access**: public  
@@ -142,12 +132,7 @@
 <a name="LMClient+setValue"></a>
 
 ### lmClient.setValue(name, value) ⇒ <code>boolean</code>
-
-Установка значения канала.
-Метод устанавливает значение для ранее созданного канала. Тип параметра value должен соответствовать типу
-канала указанному при его создании. Установленное значение канала будет передано на сервер. Кроме того, метод
-устанавливает свойство канала quality (качество) в значение stOk.
-Метод возвращает значение false если канал с указанным именем не найден.
+Установка значения канала.Метод устанавливает значение для ранее созданного канала. Тип параметра value должен соответствовать типуканала указанному при его создании. Установленное значение канала будет передано на сервер. Кроме того, методустанавливает свойство канала quality (качество) в значение stOk.Метод возвращает значение false если канал с указанным именем не найден.
 
 **Kind**: instance method of [<code>LMClient</code>](#LMClient)  
 **Access**: public  
@@ -160,7 +145,6 @@
 <a name="LMClient+setQuality"></a>
 
 ### lmClient.setQuality(name, quality) ⇒ <code>boolean</code>
-
 Установка качества канала.
 
 **Kind**: instance method of [<code>LMClient</code>](#LMClient)  
@@ -174,7 +158,6 @@
 <a name="LMClient+event_connecting"></a>
 
 ### "connecting"
-
 Событие формируется при начале подключения к серверу.
 
 **Kind**: event emitted by [<code>LMClient</code>](#LMClient)  
@@ -188,14 +171,12 @@
 <a name="LMClient+event_connect"></a>
 
 ### "connect"
-
 Событие формируется когда соединение с сервером установлено.
 
 **Kind**: event emitted by [<code>LMClient</code>](#LMClient)  
 <a name="LMClient+event_disconnect"></a>
 
 ### "disconnect"
-
 Событие формируется когда соединение с сервером разорвано.
 
 **Kind**: event emitted by [<code>LMClient</code>](#LMClient)  
@@ -208,7 +189,6 @@
 <a name="LMClient+event_loggedIn"></a>
 
 ### "loggedIn"
-
 Событие формируется когда клиент успешно зарегистрировался на сервере.
 
 **Kind**: event emitted by [<code>LMClient</code>](#LMClient)  
@@ -222,7 +202,6 @@
 <a name="LMClient+event_checkConnection"></a>
 
 ### "checkConnection"
-
 Событие формируется при успешном выполнении проверки связи с сервером.
 
 **Kind**: event emitted by [<code>LMClient</code>](#LMClient)  
@@ -235,7 +214,6 @@
 <a name="LMClient+event_timeSynchronize"></a>
 
 ### "timeSynchronize"
-
 Событие формируется при получении от сервера команды синхронизации времени.
 
 **Kind**: event emitted by [<code>LMClient</code>](#LMClient)  
@@ -245,12 +223,10 @@
 | --- | --- | --- |
 | time | <code>Date</code> | значение времени полученное от сервера |
 
-<a name="LMClient+event_data"></a>
+<a name="LMClient+event_control"></a>
 
-### "data"
-
-Событие формируется при получении от сервера команды записи в канал управления. Для подтверждения получения и обработки этого события
-необходимо установить полученное значение канала вызовом setValue(name, value).
+### "control"
+Событие формируется при получении от сервера команды записи в канал управления. Для подтверждения получения и обработки этого событиянеобходимо установить полученное значение канала вызовом setValue(name, value).
 
 **Kind**: event emitted by [<code>LMClient</code>](#LMClient)  
 **Properties**
@@ -262,19 +238,13 @@
 | control.value | <code>\*</code> | новое значение канала |
 | control.dt | <code>Date</code> | метка времени |
 
-**Example**
-
+**Example**  
 ```js
-client.on('data', function(control){
-  console.log('receive channel "' + control.name + '" value="' + control.value + '"');
-  client.setValue(control.name, control.value); // подтверждаем прием
-});
+client.on('control', function(control){  console.log('receive channel "' + control.name + '" value="' + control.value + '"');  client.setValue(control.name, control.value); // подтверждаем прием});
 ```
-
 <a name="LMClient+event_error"></a>
 
 ### "error"
-
 Событие формируется при возникновении ошибки. Программа должна содержать обработчик этого события.
 
 **Kind**: event emitted by [<code>LMClient</code>](#LMClient)  
@@ -287,7 +257,6 @@ client.on('data', function(control){
 <a name="ConnectOptions"></a>
 
 ## ConnectOptions : <code>Object</code>
-
 Параметры подключения к серверу
 
 **Kind**: global typedef  
@@ -299,14 +268,13 @@ client.on('data', function(control){
 | port | <code>number</code> | номер TCP порта |
 | login | <code>string</code> | логин |
 | password | <code>string</code> | пароль |
-| reconnect | <code>string</code> | автоматически переподключаться при ошибках и разрывах связи |
-| opros | <code>string</code> | тип учетной записи "опрос" |
-| client | <code>string</code> | тип учетной записи "клиент" (пока не поддерживается) |
+| reconnect | <code>boolean</code> | автоматически переподключаться при ошибках и разрывах связи |
+| opros | <code>boolean</code> | тип учетной записи "опрос" |
+| client | <code>boolean</code> | тип учетной записи "клиент" (пока не поддерживается) |
 
 <a name="ChannelOptions"></a>
 
 ## ChannelOptions : <code>Object</code>
-
 Параметры задаваемые при создании канала
 
 **Kind**: global typedef  
@@ -322,7 +290,10 @@ client.on('data', function(control){
 | [bounds] | <code>Array.&lt;number&gt;</code> | массив из двух элементов [нижняя граница, верхняя граница] |
 | [percentDeadband] | <code>number</code> | величина "мертвой зоны" изменения значения канала в процентах |
 
-## Пример использования
+
+## Примеры использования
+
+### Пример подключения в режиме "опрос"
 
 ```javascript
 /*jshint esversion: 6 */

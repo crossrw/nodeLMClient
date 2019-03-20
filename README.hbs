@@ -1,0 +1,133 @@
+# Клиент SCADA системы LanMon для Node.js
+
+## Назначение
+
+Библиотека предназначена для организации подключения к серверу SCADA системы LanMon из программ написанных на языке js.
+
+Более подробное описание SCADA системы LanMon можно получить на [сайте МНПП "Сатурн"](https://www.mnppsaturn.ru/?topic_id=3&good_id=184).
+
+Основные функции библиотеки:
+
+* подключение к серверу системы
+* автоматические повторные подключения при обрыве соединения или ошибках
+* автоматическая периодическая проверка канала связи с сервером
+* создание каналов со всеми поддерживаемыми сервером типами данных (включая массивы)
+* поддержка основных типов атрибутов каналов
+* поддержка установки значения свойства **quality**
+* фильтрация значений каналов с типом ```VT_R4``` и ```VT_R8``` с использованием атрибута ```ATTR_PERCENTDB```
+* поддержка получения команд управления
+* автоматическое преобразование кодировки значений каналов типа ```VT_STRING``` из кодировки CP1251 в UTF-8 и обратно
+* преообразование типа данных ```VT_DATE``` в объект js ```Date()``` и обратно с использованием информации о часовом поясе сервера
+
+Библиотека поддерживает работу с сервером LanMon начиная с его версии 4.12.
+
+Библиотека не содержит внешних зависимостей.
+
+{{>main}}
+
+## Примеры использования
+
+### Пример подключения в режиме "опрос"
+
+```javascript
+/*jshint esversion: 6 */
+
+var lm = require('./lmclient.js');
+
+// создаем экземпляр класса
+var client = new lm.LMClient({
+        host:       '127.0.0.1',                // адрес сервера
+        port:       3000,                       // порт сервера
+        login:      'login',                    // логин
+        password:   'password',                 // пароль
+        reconnect:  true,                       // автоматически переподключаться при ошибках и разрывах связи
+        opros:      true,                       // тип учетной записи "опрос"
+        client:     false                       // тип учетной записи "клиент"
+});
+
+// события
+client.on('connecting', function(host, port){
+    console.log('connecting to ' + host + ':' + port);
+});
+client.on('connect', function(){
+    console.log('connected');
+});
+client.on('loggedIn', function(id, version){
+    console.log('logged in: id=' + id.toString(10) + ' version=' + version);
+});
+client.on('checkConnection', function(time){
+    console.log('check connection successfully, delay=' + time/1000 + ' ms');
+});
+client.on('timeSynchronize', function(time){
+    console.log('timeSynchronize: serverTime="' + time.toLocaleString() + '"');
+});
+client.on('disconnect', function(){
+    console.log('disconnected');
+});
+client.on('data', function(ch){
+    console.log('receive channel "' + ch.name+ '" value="' + ch.value + '"');
+    // подтверждаем прием
+    client.setValue(ch.name, ch.value);
+});
+client.on('error', function(err){
+    console.log(err.message);
+});
+
+// создаем каналы разных типов
+client.addChannel('channel_VT_I1', lm.VT_I1, false, {
+    units: 'амперы',
+    comment: 'тип VT_UI1',
+    enum: ['красный', 'желтый', 'зеленый']
+});
+client.addChannel('channel_VT_R4', lm.VT_R4, false, {
+    units: 'омы',
+    comment: 'тип VT_R4',
+    bounds: [0, 1000]
+});
+client.addChannel('channel_VT_R8', lm.VT_R8, false, {
+    units: 'вольты',
+    comment: 'тип VT_R8',
+    bounds: [0, 1000],
+    percentDeadband: 1
+});
+client.addChannel('channel_aVT_I4', lm.VT_I4 + lm.VT_ARRAY, false, {
+    units: 'кг',
+    comment: 'массив VT_I4'
+});
+// проверка активизации канала
+client.addChannel('channel_active', lm.VT_I1, false);
+client.setValue('channel_active', 10);
+
+// подключаемся к серверу
+client.connect();
+
+// периодически формируем данные
+var value = 0;
+var value2 = 0;
+setInterval(function(){
+    if(value++ >= 120) value = 0;
+    value2 += 0.1;
+    // простые значения
+    client.setValue('channel_VT_I1', value);
+    client.setValue('channel_VT_R4', value2);
+    client.setValue('channel_VT_R8', value2);
+    // массивы
+    var arr = [value, value+1, value+2, value+3, value+4];
+    client.setValue('channel_aVT_I4', arr);
+}, 500);
+
+```
+
+Подробнее смотри в test.js.
+
+## Существующие ограничения
+
+* Поддержка только каналов второго типа
+* Пока реализован только режим подключения "опрос"
+
+## Обратная связь
+
+Замечания и предложения отправляйте на адрес lanmon@mnppsaturn.ru или непосредственно в **Issues/Pull requests**.
+
+* * *
+&copy; 2019 ООО "МНПП Сатурн"
