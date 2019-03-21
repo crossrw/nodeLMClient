@@ -1,5 +1,4 @@
 /* eslint-disable no-console */
-/*jshint esversion: 6 */
 
 var lm = require('./lmclient.js');
 
@@ -44,6 +43,9 @@ client.on('channel', function(channel){
 client.on('delete', function(name, attrId){
     if(attrId === undefined) console.log('channel "' + name + '" was removed');
     else console.log('attribute ' + attrId + ' was removed from channel "' + name + '" deleted');
+});
+client.on('change', function(channel){
+    console.log('changed channel ' + channel.name);
 });
 client.on('error', function(err){
     console.log(err.message);

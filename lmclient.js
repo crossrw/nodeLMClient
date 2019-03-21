@@ -1,4 +1,3 @@
-/*jshint esversion: 6 */
 /**
  * @project LMClient
  * @file Класс клиента сервера LM
@@ -302,6 +301,22 @@ function win1251toUtf8(s) {
  * @property {Channel2} channel - объект состояние канала
 */
 /**
+ * Уведомление о добавлении нового канала.
+ * Уведомление формируется только для учетных записей типа "клиент" в случае добавления нового канала другим клиентом сервера.
+ * Значение и метка времени канала сразу после его добавления не определено.
+ * @event LMClient#add
+ * @property {Channel2} channel - новый канал
+*/
+
+/**
+ * Уведомление о изменении настроек (свойств или атрибутов) канала.
+ * Измениться могут перечень и значения атрибутов, значения свойств active, writeEnable и saveServer.
+ * Изменение значения самого канала не приводит к появлению данного уведомления. Уведомление формируется
+ * только для учетных записей типа "клиент".
+ * @event LMClient#change
+ * @property {Channel2} channel - измененный канал
+*/
+/**
  * Уведомление об удалении канала с именем "name" или его атрибута с идентификатором "attrId".
  * Если аргумент "attrId" не определен, то событие сообщает об удалении канала "name". 
  * В противном случае событие сообщает об удалении атрибута "attrId".
@@ -314,13 +329,6 @@ function win1251toUtf8(s) {
  * @event LMClient#delete
  * @property {string} name - имя канала
  * @property {number} [attrId] - идентификатор атрибута
-*/
-/**
- * Уведомление о добавлении нового канала.
- * Уведомление формируется только для учетных записей типа "клиент" в случае добавления нового канала другим клиентом сервера.
- * Значение и метка времени канала сразу после его добавления не определено.
- * @event LMClient#add
- * @property {Channel2} channel - новый канал
 */
 /**
  * Событие формируется при возникновении ошибки. Программа должна содержать обработчик этого события.
@@ -337,8 +345,9 @@ function win1251toUtf8(s) {
  * @fires LMClient#timeSynchronize
  * @fires LMClient#control
  * @fires LMClient#channel
- * @fires LMClient#delete
  * @fires LMClient#add
+ * @fires LMClient#change
+ * @fires LMClient#delete
  * @fires LMClient#error
  */
 class LMClient extends EventEmitter {
@@ -687,7 +696,7 @@ class LMClient extends EventEmitter {
             let cmd = this.inbuf.readUInt8(offset);
             // определяем размер структуры
             let size = this._structSize(cmd);
-            if(size == 0) {
+            if(size === 0) {
                 // размер структуры присутствует в самой структуре
                 if(this.inbuf.length < offset + 3) {
                     this._truncateInBuf(offset);
@@ -1082,9 +1091,16 @@ class LMClient extends EventEmitter {
                 // разбор
                 if(channel.name in this.channels) {
                     // канал уже существует, изменились настройки
-                    /** 
-                     * @todo необходимо добавить модификацию свойств канала
-                    */
+                    // поменяться могут атрибуты и флаги
+                    let ch = this.channels[channel.name];
+                    //
+                    ch.active = channel.active;
+                    ch.writeEnable = channel.writeEnable;
+                    ch.saveServer = channel.saveServer;
+                    ch.groups = channel.groups;
+                    ch.attributes = channel.attributes;
+                    // уведомление о изменении
+                    this.emit('change', ch);
                 } else {
                     // добавлен новый канал
                     channel.dt = new Date();
