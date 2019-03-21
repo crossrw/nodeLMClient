@@ -9,13 +9,14 @@
 Основные функции библиотеки:
 
 * подключение к серверу системы
-* автоматические повторные подключения при обрыве соединения или ошибках
-* автоматическая периодическая проверка канала связи с сервером
-* создание каналов со всеми поддерживаемыми сервером типами данных (включая массивы)
-* поддержка основных типов атрибутов каналов
+* поддержка типов учетной записи "опрос" и "клиент"
+* автоматическое восстанвление подключения при обрывах или ошибках
+* автоматическая проверка канала связи с сервером
+* создание каналов со всеми поддерживаемыми сервером типами данных, включая массивы
+* поддержка всех типов атрибутов каналов
 * поддержка установки значения свойства **quality**
 * фильтрация значений каналов с типом ```VT_R4``` и ```VT_R8``` с использованием атрибута ```ATTR_PERCENTDB```
-* поддержка получения команд управления
+* поддержка передачи и получения команд управления
 * автоматическое преобразование кодировки значений каналов типа ```VT_STRING``` из кодировки CP1251 в UTF-8 и обратно
 * преообразование типа данных ```VT_DATE``` в объект js ```Date()``` и обратно с использованием информации о часовом поясе сервера
 
@@ -57,7 +58,7 @@
 Класс клиента сервера LM
 
 **Kind**: global class  
-**Emits**: [<code>connecting</code>](#LMClient+event_connecting), [<code>connect</code>](#LMClient+event_connect), [<code>disconnect</code>](#LMClient+event_disconnect), [<code>loggedIn</code>](#LMClient+event_loggedIn), [<code>checkConnection</code>](#LMClient+event_checkConnection), [<code>timeSynchronize</code>](#LMClient+event_timeSynchronize), [<code>control</code>](#LMClient+event_control), [<code>error</code>](#LMClient+event_error)  
+**Emits**: [<code>connecting</code>](#LMClient+event_connecting), [<code>connect</code>](#LMClient+event_connect), [<code>disconnect</code>](#LMClient+event_disconnect), [<code>loggedIn</code>](#LMClient+event_loggedIn), [<code>checkConnection</code>](#LMClient+event_checkConnection), [<code>timeSynchronize</code>](#LMClient+event_timeSynchronize), [<code>control</code>](#LMClient+event_control), [<code>channel</code>](#LMClient+event_channel), [<code>delete</code>](#LMClient+event_delete), [<code>add</code>](#LMClient+event_add), [<code>error</code>](#LMClient+event_error)  
 
 * [LMClient](#LMClient)
     * [new LMClient(options)](#new_LMClient_new)
@@ -79,6 +80,8 @@
     * ["timeSynchronize"](#LMClient+event_timeSynchronize)
     * ["control"](#LMClient+event_control)
     * ["channel"](#LMClient+event_channel)
+    * ["delete"](#LMClient+event_delete)
+    * ["add"](#LMClient+event_add)
     * ["error"](#LMClient+event_error)
 
 <a name="new_LMClient_new"></a>
@@ -140,7 +143,7 @@
 <a name="LMClient+addChannel"></a>
 
 ### lmClient.addChannel(name, type, writeEnable, options) ⇒ <code>boolean</code>
-Добавление нового канала.Метод добавляет новый канал для регистрации и передачи данных на сервер.Метод возвращает значение false если канал с указанным именем уже существует илиесли указан некорректный тип данных.
+Добавление нового канала.Метод добавляет новый канал для регистрации и передачи данных на сервер.Метод используется при подключении с типом учетной записи "опрос".Метод может быть вызван при любом состоянии подключения к сервреру.Метод возвращает значение false если канал с указанным именем уже существует илиесли указан некорректный тип данных.
 
 **Kind**: instance method of [<code>LMClient</code>](#LMClient)  
 **Access**: public  
@@ -155,7 +158,7 @@
 <a name="LMClient+setValue"></a>
 
 ### lmClient.setValue(name, value) ⇒ <code>boolean</code>
-Установка значения канала.Метод устанавливает значение для ранее созданного канала. Тип и значение параметра value должен соответствовать типуканала указанному при его создании. Установленное значение канала будет передано на сервер. Кроме того, методустанавливает свойство канала quality (качество) в значение stOk. Установка значения возможна только для типа учетной записи "опрос".Метод возвращает значение false если канал с указанным именем не найден или указан некорректный тип учетной записи.
+Установка значения канала.Метод устанавливает значение для ранее созданного канала. Тип и значение параметра value должен соответствовать типуканала указанному при его создании. Установленное значение канала будет передано на сервер. Кроме того, методустанавливает свойство канала quality (качество) в значение stOk. Метод используется при подключении с типом учетной записи "опрос". Метод может быть вызван при любом состоянии подключения к сервреру.Метод возвращает значение false если канал с указанным именем не найден или указан некорректный тип учетной записи.
 
 **Kind**: instance method of [<code>LMClient</code>](#LMClient)  
 **Access**: public  
@@ -168,7 +171,7 @@
 <a name="LMClient+setQuality"></a>
 
 ### lmClient.setQuality(name, quality) ⇒ <code>boolean</code>
-Установка качества канала.Метод устанавливает значение свойства качество для ранее созданного канала. Установка значения качества канала возможна толькопри подключении к серверу с типом учетной записи "опрос". Значение качества канала stOk автоматически устанавливается при установкезначения канала методом setValue(name, value) и отдельно устанавливать его не требуется.Метод возвращает значение false если канал с указанным именем не найден, указано некорректное значение качества или тип учетной записи.
+Установка качества канала.Метод устанавливает значение свойства качество для ранее созданного канала. Метод используется при подключении с типом учетной записи "опрос". Значение качества канала stOk автоматически устанавливается при установкезначения канала методом setValue(name, value) и отдельно устанавливать его не требуется.Метод может быть вызван при любом состоянии подключения к сервреру.Метод возвращает значение false если канал с указанным именем не найден, указано некорректное значение качества или тип учетной записи.
 
 **Kind**: instance method of [<code>LMClient</code>](#LMClient)  
 **Access**: public  
@@ -181,9 +184,13 @@
 <a name="LMClient+sendControl"></a>
 
 ### lmClient.sendControl(name, value) ⇒ <code>boolean</code>
-Формирование команды управления каналом для типа учетной записи "опрос"
+Формирование команды управления каналом. Метод используется при подключении с типом учетной записи "клиент".Для выполнения управления каналом должны выполняться следующие условия: клиент должен быть подключен и зарегистрирован на сервере,канал должен быть существующим, канал должен быть создан другим клиентом (опросчиком), у канала должны быть установлены признаки активности и разрешения записи значений, тип значения value должен быть совместим с типом канала.При выполнении перечисленных выше условий метод возвращает true, иначе - false.Метод не устанавливает значение канала, полученную команду управления сервер пересылает клиенту типа "опрос", который сформировал этот канал.
 
 **Kind**: instance method of [<code>LMClient</code>](#LMClient)  
+**Todo**
+
+- [ ] проверить работу
+
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -286,6 +293,35 @@ client.on('control', function(control){  console.log('receive control "' + cont
 | --- | --- | --- |
 | channel | [<code>Channel2</code>](#Channel2) | объект состояние канала |
 
+<a name="LMClient+event_delete"></a>
+
+### "delete"
+Уведомление об удалении канала с именем "name" или его атрибута с идентификатором "attrId".Если аргумент "attrId" не определен, то событие сообщает об удалении канала "name". В противном случае событие сообщает об удалении атрибута "attrId".Уведомление формируется только для учетных записей типа "клиент".
+
+**Kind**: event emitted by [<code>LMClient</code>](#LMClient)  
+**Properties**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| name | <code>string</code> | имя канала |
+| [attrId] | <code>number</code> | идентификатор атрибута |
+
+**Example**  
+```js
+client.on('delete', function(name, attrId){  if(attrId === undefined) console.log('channel "' + name + '" was removed');  else console.log('attribute ' + attrId + ' was removed from channel "' + name + '" deleted');});
+```
+<a name="LMClient+event_add"></a>
+
+### "add"
+Уведомление о добавлении нового канала.Уведомление формируется только для учетных записей типа "клиент" в случае добавления нового канала другим клиентом сервера.Значение и метка врмени канала сразу после его добавления не определено.
+
+**Kind**: event emitted by [<code>LMClient</code>](#LMClient)  
+**Properties**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| channel | [<code>Channel2</code>](#Channel2) | новый канал |
+
 <a name="LMClient+event_error"></a>
 
 ### "error"
@@ -320,9 +356,9 @@ client.on('control', function(control){  console.log('receive control "' + cont
 | writeEnable | <code>boolean</code> | разрешение записи |
 | saveServer | <code>boolean</code> | сохранять значение на сервере при откоючении источника |
 | attributes | <code>Object.&lt;number, Attribute&gt;</code> | массив атрибутов |
-| creator | <code>number</code> | идентификатор создателя канала |
-| owner | <code>number</code> | источник значения для канала |
-| groups | <code>number</code> | принадлежность группам каналов |
+| [creator] | <code>number</code> | идентификатор создателя канала |
+| [owner] | <code>number</code> | источник значения для канала |
+| [groups] | <code>number</code> | принадлежность группам каналов |
 
 <a name="Attribute"></a>
 
@@ -369,7 +405,7 @@ client.on('control', function(control){  console.log('receive control "' + cont
 | password | <code>string</code> | пароль |
 | reconnect | <code>boolean</code> | автоматически переподключаться при ошибках и разрывах связи |
 | opros | <code>boolean</code> | тип учетной записи "опрос" |
-| client | <code>boolean</code> | тип учетной записи "клиент" (пока поддерживается не полностью) |
+| client | <code>boolean</code> | тип учетной записи "клиент" |
 
 <a name="ChannelOptions"></a>
 
@@ -546,7 +582,8 @@ client.connect();
 ## Существующие ограничения
 
 * Поддержка только каналов второго типа
-* Пока реализован только режим подключения "опрос"
+* Не реализована возможность изменения значений атрибутов каналов
+* Не реализована возможность удаления атрибутов и каналов
 
 ## Обратная связь
 

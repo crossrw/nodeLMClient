@@ -41,11 +41,19 @@ client.on('control', function(ch){
 client.on('channel', function(channel){
     console.log('receive channel ' + channel.name + ' value:' + channel.value + ' quality:' + channel.quality);
 });
-
-
+client.on('delete', function(name, attrId){
+    if(attrId === undefined) console.log('channel "' + name + '" was removed');
+    else console.log('attribute ' + attrId + ' was removed from channel "' + name + '" deleted');
+});
 client.on('error', function(err){
     console.log(err.message);
 });
 
 // подключаемся к серверу
 client.connect();
+
+setInterval(function(){
+    let count = Object.keys(client.channels).length;
+    console.log('count:'+count);
+
+}, 10000);

@@ -165,9 +165,9 @@ validAttributes[ATTR_UNITNUMBER]         = VT_UI4;
  * @property {boolean} writeEnable - разрешение записи
  * @property {boolean} saveServer - сохранять значение на сервере при откоючении источника
  * @property {Object.<number, Attribute>} attributes - массив атрибутов    
- * @property {number} creator - идентификатор создателя канала
- * @property {number} owner - источник значения для канала
- * @property {number} groups - принадлежность группам каналов
+ * @property {number} [creator] - идентификатор создателя канала
+ * @property {number} [owner] - источник значения для канала
+ * @property {number} [groups] - принадлежность группам каналов
  */
 /**
  * Атрибут канала
@@ -201,7 +201,7 @@ validAttributes[ATTR_UNITNUMBER]         = VT_UI4;
  * @property {string} password - пароль
  * @property {boolean} reconnect - автоматически переподключаться при ошибках и разрывах связи
  * @property {boolean} opros - тип учетной записи "опрос"
- * @property {boolean} client - тип учетной записи "клиент" (пока поддерживается не полностью)
+ * @property {boolean} client - тип учетной записи "клиент"
  */
 /**
  * Параметры задаваемые при создании канала
@@ -302,6 +302,27 @@ function win1251toUtf8(s) {
  * @property {Channel2} channel - объект состояние канала
 */
 /**
+ * Уведомление об удалении канала с именем "name" или его атрибута с идентификатором "attrId".
+ * Если аргумент "attrId" не определен, то событие сообщает об удалении канала "name". 
+ * В противном случае событие сообщает об удалении атрибута "attrId".
+ * Уведомление формируется только для учетных записей типа "клиент".
+ * @example
+ * client.on('delete', function(name, attrId){
+ *   if(attrId === undefined) console.log('channel "' + name + '" was removed');
+ *   else console.log('attribute ' + attrId + ' was removed from channel "' + name + '" deleted');
+ * });
+ * @event LMClient#delete
+ * @property {string} name - имя канала
+ * @property {number} [attrId] - идентификатор атрибута
+*/
+/**
+ * Уведомление о добавлении нового канала.
+ * Уведомление формируется только для учетных записей типа "клиент" в случае добавления нового канала другим клиентом сервера.
+ * Значение и метка врмени канала сразу после его добавления не определено.
+ * @event LMClient#add
+ * @property {Channel2} channel - новый канал
+*/
+/**
  * Событие формируется при возникновении ошибки. Программа должна содержать обработчик этого события.
  * @event LMClient#error
  * @property {Error} error - ошибка
@@ -315,6 +336,9 @@ function win1251toUtf8(s) {
  * @fires LMClient#checkConnection
  * @fires LMClient#timeSynchronize
  * @fires LMClient#control
+ * @fires LMClient#channel
+ * @fires LMClient#delete
+ * @fires LMClient#add
  * @fires LMClient#error
  */
 class LMClient extends EventEmitter {
@@ -475,6 +499,8 @@ class LMClient extends EventEmitter {
     /**
      * Добавление нового канала.
      * Метод добавляет новый канал для регистрации и передачи данных на сервер.
+     * Метод используется при подключении с типом учетной записи "опрос".
+     * Метод может быть вызван при любом состоянии подключения к сервреру.
      * Метод возвращает значение false если канал с указанным именем уже существует или
      * если указан некорректный тип данных.
      * @public
@@ -492,6 +518,7 @@ class LMClient extends EventEmitter {
         // проверка на дублирование имени
         if(name in this.channels) return false;
         // создаем канал
+        /** @type {Channel2} */
         var channel = {
             'name': name,
             'type': type,
@@ -536,7 +563,8 @@ class LMClient extends EventEmitter {
      * Установка значения канала.
      * Метод устанавливает значение для ранее созданного канала. Тип и значение параметра value должен соответствовать типу
      * канала указанному при его создании. Установленное значение канала будет передано на сервер. Кроме того, метод
-     * устанавливает свойство канала quality (качество) в значение stOk. Установка значения возможна только для типа учетной записи "опрос".
+     * устанавливает свойство канала quality (качество) в значение stOk. Метод используется при подключении с 
+     * типом учетной записи "опрос". Метод может быть вызван при любом состоянии подключения к сервреру.
      * Метод возвращает значение false если канал с указанным именем не найден или указан некорректный тип учетной записи.
      * @public
      * @param {string} name Имя канала
@@ -582,10 +610,12 @@ class LMClient extends EventEmitter {
     }
     /**
      * Установка качества канала.
-     * Метод устанавливает значение свойства качество для ранее созданного канала. Установка значения качества канала возможна только
-     * при подключении к серверу с типом учетной записи "опрос". Значение качества канала stOk автоматически устанавливается при установке
+     * Метод устанавливает значение свойства качество для ранее созданного канала. Метод используется при подключении с 
+     * типом учетной записи "опрос". Значение качества канала stOk автоматически устанавливается при установке
      * значения канала методом setValue(name, value) и отдельно устанавливать его не требуется.
-     * Метод возвращает значение false если канал с указанным именем не найден, указано некорректное значение качества или тип учетной записи.
+     * Метод может быть вызван при любом состоянии подключения к сервреру.
+     * Метод возвращает значение false если канал с указанным именем не найден, указано некорректное значение качества или 
+     * тип учетной записи.
      * @public
      * @param {string} name Имя канала
      * @param {number} quality Новое значение качества
@@ -608,13 +638,21 @@ class LMClient extends EventEmitter {
         return true;
     }
     /**
-     * Формирование команды управления каналом для типа учетной записи "опрос"
+     * Формирование команды управления каналом. 
+     * Метод используется при подключении с типом учетной записи "клиент".
+     * Для выполнения управления каналом должны выполняться следующие условия: клиент должен быть подключен и зарегистрирован на сервере,
+     * канал должен быть существующим, канал должен быть создан другим клиентом (опросчиком), у канала должны быть установлены признаки 
+     * активности и разрешения записи значений, тип значения value должен быть совместим с типом канала.
+     * При выполнении перечисленных выше условий метод возвращает true, иначе - false.
+     * Метод не устанавливает значение канала, полученную команду управления сервер пересылает клиенту типа "опрос", который сформировал этот канал.
+     * @todo проверить работу
      * @param {string} name Имя канала
      * @param {*} value Значение команды управления
      * @return {boolean}
      */
     sendControl(name, value) {
-        /** @todo */
+        if(!(this.options.client && this.loggedIn)) return false;
+        return this._sendControlStruct(name, value);
     }
     /**
      * Отключение от сервера с последующим возможным повторным подключением
@@ -651,7 +689,7 @@ class LMClient extends EventEmitter {
             let size = this._structSize(cmd);
             if(size == 0) {
                 // размер структуры присутствует в самой структуре
-                if(this.inbuf.length < offset + 2) {
+                if(this.inbuf.length < offset + 3) {
                     this._truncateInBuf(offset);
                     return;
                 }
@@ -813,11 +851,7 @@ class LMClient extends EventEmitter {
             case 54: {
                 // ответ на запрос всех каналов (продолжение)
                 /** @type {Channel2} */
-                let channel = {
-                    needRegister: false,
-                    needSend: false,
-                    attributes: {}
-                };
+                let channel = this._createEmptyChannel();
                 // Size             VT_UI2
                 // let size = data.readUInt16LE(offset);
                 offset += 2;
@@ -990,9 +1024,75 @@ class LMClient extends EventEmitter {
                 break;
             }
             case 59: {
-                /**
-                 * @todo получение описания канала со всеми атрибутами от сервера при его изменении кем-либо
-                 */
+                // получение описания канала со всеми атрибутами от сервера при его изменении или добавлении
+                // похоже на команду 54, но нет значения канала
+                /** @type {Channel2} */
+                let channel = this._createEmptyChannel();
+                // Size             VT_UI2
+                offset += 2;
+                // Flags            VT_UI1      флаги
+                let flags = data.readUInt8(offset++);
+                channel.active = !!(flags&1);
+                channel.writeEnable = !!(flags&8);
+                channel.saveServer = !!(flags&16);
+                // Id               VT_STRING
+                let channelNameLen = data.readUInt16LE(offset);
+                offset += 2;
+                channel.name = win1251toUtf8(data.toString('binary', offset, offset + channelNameLen));
+                offset += channelNameLen;
+                // Number           VT_UI4
+                channel.number = data.readUInt32LE(offset);
+                offset += 4;
+                // Creator          VT_I2
+                channel.creator = data.readInt16LE(offset);
+                offset += 2;
+                // Type             VT_UI2      тип данных канала
+                channel.type = data.readUInt16LE(offset);
+                offset += 2;
+                // AttributeCount   VT_UI2      количество атрибутов
+                let attrCount = data.readUInt16LE(offset);
+                offset += 2;
+                // Attributes       []          массив атрибутов
+                for(let i=0; i < attrCount; i++) {
+                    // чтение атрибута
+                    /** @type {Attribute} */
+                    let attr = {
+                        fromServer: true
+                    };
+                    // AttributeId      VT_UI2
+                    attr.id = data.readUInt16LE(offset);
+                    offset += 2;
+                    // AttributeType    VT_UI2
+                    // AttributeValue   VARTYPE
+                    let vtv = this._readVarTypeValue(data, offset);
+                    attr.value = vtv.value;
+                    offset += vtv.size;
+                    // Owner            VT_I2
+                    attr.owner = data.readInt16LE(offset);
+                    offset += 2;
+                    // AttributeDT      VT_R8
+                    attr.dt = this._dateTimeToDate(data.readDoubleLE(offset));
+                    offset += 8;
+                    // добавляем атрибут к каналу
+                    channel.attributes[attr.id] = attr;
+                }
+                // Groups           VT_UI4
+                channel.groups = data.readUInt32LE(offset);
+                offset += 4;
+                // разбор
+                if(channel.name in this.channels) {
+                    // канал уже существует, изменились настройки
+                    /** 
+                     * @todo необходимо добавить модификацию свойств канала
+                    */
+                } else {
+                    // добавлен новый канал
+                    channel.dt = new Date();
+                    this.channels[channel.name] = channel;
+                    this.channelsNumbers[channel.number] = channel.name;
+                    // уведомление о добавлении канала
+                    this.emit('add', channel);
+                }
                 break;
             }
             case 60: {
@@ -1058,9 +1158,62 @@ class LMClient extends EventEmitter {
                 break;
             }
             case 61: {
-                /**
-                 * @todo удаление канала или атрибута
-                 */
+                // удаление канала / изменение активности канала / удаление атрибута
+                // Size             VT_UI2
+                // let size = data.readUInt16LE(offset);
+                offset += 2;
+                // Flag             VT_UI1
+                let flags = data.readUInt8(offset++);
+                // Number или Id    VT_UI4 или VT_STRING
+                let channelName;
+                if(flags & 1) {
+                    // Number       VT_UI4
+                    channelName = this._channelNameByNumber(data.readUInt32LE(offset));
+                    offset += 4;
+                    // если канал не найден, то его имя будет null
+                } else {
+                    // Id           VT_STRING
+                    let channelNameLen = data.readUInt16LE(offset);
+                    offset += 2;
+                    channelName = win1251toUtf8(data.toString('binary', offset, offset + channelNameLen));
+                    offset += channelNameLen;
+                }
+                // AttrId           VT_UI2
+                let attrId = data.readUInt16LE(offset);
+                // проверка наличия канала
+                if(channelName === null) break;
+                if(!(channelName in this.channels)) break;
+                let channel = this.channels[channelName];
+                //
+                if(flags & 2) {
+                    // удаление канала
+                    delete this.channelsNumbers[channel.number];
+                    delete this.channels[channelName];
+                    // событие удаления канала
+                    this.emit('delete', channelName)
+                } else
+                if(flags & 4) {
+                    // удаление атрибута
+                    if(attrId in channel.attributes) {
+                        delete channel.attributes[attrId];
+                        // событие удаления атрибута
+                        this.emit('delete', channelName, attrId);
+                    }
+                } else 
+                if(flags & 8) {
+                    // изменение активности канала
+                    let oldActive = channel.active;
+                    channel.active = !!(flags & 16);
+                    // проверка на смену активности
+                    if(channel.active && !oldActive) {
+                        if(channel.needSend) {
+                            // если появилась активность, то передаем значение канала
+                            this._sendChannel(channel);
+                            channel.needSend = false;
+                        }
+                    }
+                }
+                // (flags & 16) - подтверждение моей команды на удаление канала/атрибута
                 break;
             }
             case 63: {
@@ -1069,6 +1222,75 @@ class LMClient extends EventEmitter {
             }
             case 66: {
                 // ответ на удаление канала / удаление атрибута / изменение активности канала / изменение маски групп каналов
+                // расширенный вариант команды 61
+                // Cmd              VT_UI1
+                // Size             VT_UI2
+                // let size = data.readUInt16LE(offset);
+                offset += 2;
+                // Flag             VT_UI1
+                let flags = data.readUInt8(offset++);
+                // Number или Id    VT_UI4 или VT_STRING
+                let channelName;
+                if(flags & 1) {
+                    // Number       VT_UI4
+                    channelName = this._channelNameByNumber(data.readUInt32LE(offset));
+                    offset += 4;
+                    // если канал не найден, то его имя будет null
+                } else {
+                    // Id           VT_STRING
+                    let channelNameLen = data.readUInt16LE(offset);
+                    offset += 2;
+                    channelName = win1251toUtf8(data.toString('binary', offset, offset + channelNameLen));
+                    offset += channelNameLen;
+                }
+                // ActionType       VT_UI1
+                let actionType = data.readUInt8(offset++);
+                // ActionData       VT_UI4
+                let actionData = data.readUInt32(offset);
+                offset += 4;
+                // проверка наличия канала
+                if(channelName === null) break;
+                if(!(channelName in this.channels)) break;
+                let channel = this.channels[channelName];
+                //
+                switch(actionType) {
+                    case 1: {
+                        // удаление канала
+                        delete this.channelsNumbers[channel.number];
+                        delete this.channels[channelName];
+                        // событие удаления канала
+                        this.emit('delete', channelName)
+                        break;
+                    }
+                    case 2: {
+                        // удаление атрибута
+                        if(actionData in channel.attributes) {
+                            delete channel.attributes[actionData];
+                            // событие удаления атрибута
+                            this.emit('delete', channelName, actionData);
+                        }
+                        break;
+                    }
+                    case 3: {
+                        // изменение активности канала
+                        let oldActive = channel.active;
+                        channel.active = !!actionData;
+                        // проверка на смену активности
+                        if(channel.active && !oldActive) {
+                            if(channel.needSend) {
+                                // если появилась активность, то передаем значение канала
+                                this._sendChannel(channel);
+                                channel.needSend = false;
+                            }
+                        }
+                        break;
+                    }
+                    case 4: {
+                        // изменение маски групп каналов
+                        channel.groups = actionData;
+                        break;
+                    }
+                }
                 break;
             }
             case 100: {
@@ -1125,6 +1347,47 @@ class LMClient extends EventEmitter {
             default:
                 return 0;
         }
+    }
+    /**
+     * Отправка структуры управления каналом
+     * @private
+     * @param {string} name 
+     * @param {*} value 
+     * @returns {boolean}
+     */
+    _sendControlStruct(name, value) {
+        // Cmd          UI1     55
+        // Size         UI2
+        // Flag         UI1
+        // Number       UI4
+        // TimeStamp    R8
+        // Quality      UI1
+        // Type         UI2
+        // Value        VARTYPE
+        if(!(name in this.channels)) return false;
+        let channel = this.channels[name];
+        if(!(channel.active && channel.writeEnable && ('creator' in channel))) return false;
+        //
+        var buf = Buffer.allocUnsafe(4096);
+        // Cmd          UI1     55
+        let offset = buf.writeUInt8(55, 0);
+        // Size         UI2     пока пропускаем
+        offset += 2;
+        // Flag         UI1     00001101
+        offset = buf.writeUInt8(13, offset);
+        // Number       UI4
+        offset = buf.writeUInt32LE(channel.number, offset);
+        // TimeStamp    R8
+        offset = buf.writeDoubleLE(this._dateToDateTime(new Date()), offset);
+        // Quality      UI1
+        offset = buf.writeUInt8(stOk, offset);
+        // Type         UI2
+        // Value        VARTYPE
+        offset += this._writeVarTypeValue(value, channel.type).copy(buf, offset);
+        // Size         UI2
+        buf.writeUInt16LE(offset, 1);
+        // передача
+        this.socket.write(buf.slice(0, offset));
     }
     /**
      * Отправка структуры регистрации
@@ -1620,6 +1883,23 @@ class LMClient extends EventEmitter {
             return this.channelsNumbers[number];
         } else {
             return null;
+        }
+    }
+    /**
+     * Создает пустой канал
+     * @private
+     * @returns {Channel2}
+     */
+    _createEmptyChannel() {
+        return {
+            name: '',
+            quality: stOff,
+            needRegister: false,
+            needSend: false,
+            active: false,
+            writeEnable: false,
+            saveServer: false,
+            attributes: {}
         }
     }
 }
