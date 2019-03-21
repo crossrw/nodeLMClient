@@ -58,7 +58,7 @@
 Класс клиента сервера LM
 
 **Kind**: global class  
-**Emits**: [<code>connecting</code>](#LMClient+event_connecting), [<code>connect</code>](#LMClient+event_connect), [<code>disconnect</code>](#LMClient+event_disconnect), [<code>loggedIn</code>](#LMClient+event_loggedIn), [<code>checkConnection</code>](#LMClient+event_checkConnection), [<code>timeSynchronize</code>](#LMClient+event_timeSynchronize), [<code>control</code>](#LMClient+event_control), [<code>channel</code>](#LMClient+event_channel), [<code>delete</code>](#LMClient+event_delete), [<code>add</code>](#LMClient+event_add), [<code>error</code>](#LMClient+event_error)  
+**Emits**: [<code>connecting</code>](#LMClient+event_connecting), [<code>connect</code>](#LMClient+event_connect), [<code>disconnect</code>](#LMClient+event_disconnect), [<code>loggedIn</code>](#LMClient+event_loggedIn), [<code>checkConnection</code>](#LMClient+event_checkConnection), [<code>timeSynchronize</code>](#LMClient+event_timeSynchronize), [<code>control</code>](#LMClient+event_control), [<code>channel</code>](#LMClient+event_channel), [<code>add</code>](#LMClient+event_add), [<code>change</code>](#LMClient+event_change), [<code>delete</code>](#LMClient+event_delete), [<code>error</code>](#LMClient+event_error)  
 
 * [LMClient](#LMClient)
     * [new LMClient(options)](#new_LMClient_new)
@@ -80,8 +80,9 @@
     * ["timeSynchronize"](#LMClient+event_timeSynchronize)
     * ["control"](#LMClient+event_control)
     * ["channel"](#LMClient+event_channel)
-    * ["delete"](#LMClient+event_delete)
     * ["add"](#LMClient+event_add)
+    * ["change"](#LMClient+event_change)
+    * ["delete"](#LMClient+event_delete)
     * ["error"](#LMClient+event_error)
 
 <a name="new_LMClient_new"></a>
@@ -293,6 +294,30 @@ client.on('control', function(control){  console.log('receive control "' + cont
 | --- | --- | --- |
 | channel | [<code>Channel2</code>](#Channel2) | объект состояние канала |
 
+<a name="LMClient+event_add"></a>
+
+### "add"
+Уведомление о добавлении нового канала.Уведомление формируется только для учетных записей типа "клиент" в случае добавления нового канала другим клиентом сервера.Значение и метка времени канала сразу после его добавления не определено.
+
+**Kind**: event emitted by [<code>LMClient</code>](#LMClient)  
+**Properties**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| channel | [<code>Channel2</code>](#Channel2) | новый канал |
+
+<a name="LMClient+event_change"></a>
+
+### "change"
+Уведомление о изменении настроек (свойств или атрибутов) канала.Измениться могут перечень и значения атрибутов, значения свойств active, writeEnable и saveServer.Изменение значения самого канала не приводит к появлению данного уведомления. Уведомление формируетсятолько для учетных записей типа "клиент".
+
+**Kind**: event emitted by [<code>LMClient</code>](#LMClient)  
+**Properties**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| channel | [<code>Channel2</code>](#Channel2) | измененный канал |
+
 <a name="LMClient+event_delete"></a>
 
 ### "delete"
@@ -310,18 +335,6 @@ client.on('control', function(control){  console.log('receive control "' + cont
 ```js
 client.on('delete', function(name, attrId){  if(attrId === undefined) console.log('channel "' + name + '" was removed');  else console.log('attribute ' + attrId + ' was removed from channel "' + name + '" deleted');});
 ```
-<a name="LMClient+event_add"></a>
-
-### "add"
-Уведомление о добавлении нового канала.Уведомление формируется только для учетных записей типа "клиент" в случае добавления нового канала другим клиентом сервера.Значение и метка времени канала сразу после его добавления не определено.
-
-**Kind**: event emitted by [<code>LMClient</code>](#LMClient)  
-**Properties**
-
-| Name | Type | Description |
-| --- | --- | --- |
-| channel | [<code>Channel2</code>](#Channel2) | новый канал |
-
 <a name="LMClient+event_error"></a>
 
 ### "error"
