@@ -1227,7 +1227,7 @@ class LMClient extends EventEmitter {
                     delete this.channelsNumbers[channel.number];
                     delete this.channels[channelName];
                     // событие удаления канала
-                    this.emit('delete', channelName)
+                    this.emit('delete', channelName);
                 } else
                 if(flags & 4) {
                     // удаление атрибута
@@ -1296,7 +1296,7 @@ class LMClient extends EventEmitter {
                         delete this.channelsNumbers[channel.number];
                         delete this.channels[channelName];
                         // событие удаления канала
-                        this.emit('delete', channelName)
+                        this.emit('delete', channelName);
                         break;
                     }
                     case 2: {
@@ -1937,7 +1937,7 @@ class LMClient extends EventEmitter {
             writeEnable: false,
             saveServer: false,
             attributes: {}
-        }
+        };
     }
 }
 
