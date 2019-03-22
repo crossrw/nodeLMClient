@@ -592,6 +592,7 @@ class LMClient extends EventEmitter {
      * @public
      * @param {string} name - имя канала
      * @param {number} [attrId] - идентификатор атрибута
+     * @returns {boolean}
      */
     delete(name, attrId) {
         // проверка регистрации и типа подключения

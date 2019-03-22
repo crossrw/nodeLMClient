@@ -69,7 +69,7 @@
     * [.connect()](#LMClient+connect)
     * [.disconnect()](#LMClient+disconnect)
     * [.add(name, type, writeEnable, options)](#LMClient+add) ⇒ <code>boolean</code>
-    * [.delete(name, [attrId])](#LMClient+delete)
+    * [.delete(name, [attrId])](#LMClient+delete) ⇒ <code>boolean</code>
     * [.setValue(name, value)](#LMClient+setValue) ⇒ <code>boolean</code>
     * [.setQuality(name, quality)](#LMClient+setQuality) ⇒ <code>boolean</code>
     * [.sendControl(name, value)](#LMClient+sendControl) ⇒ <code>boolean</code>
@@ -163,7 +163,7 @@
 
 <a name="LMClient+delete"></a>
 
-### lmClient.delete(name, [attrId])
+### lmClient.delete(name, [attrId]) ⇒ <code>boolean</code>
 Удаление канала или атрибута канала.Метод выполняет передачу на сервер запроса на удаление канала или отдельного атрибута канала.При вызове метода клиент должен быть подключен и зарегистрирован на сервере.При наличии соотвествующих прав доступа клиента, сервер выполняет удаление соответствующей сущности и рассылет уведомления всемподключенным к нему клиентам, в том числе и вам. При удачном удалении через некоторое время после вызова метода клиент получит уведомление ["delete"](#LMClient+event_delete).Метод используется при подключении с типом учетной записи "клиент".
 
 **Kind**: instance method of [<code>LMClient</code>](#LMClient)  
