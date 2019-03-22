@@ -407,8 +407,8 @@ class LMClient extends EventEmitter {
          */
         this.checkConnectInterval = 480000;
         /**
-         * Ассоциативный массив каналов. Элементы массива является экземплярами класса Channel2.
-         * Ключами в массиве является имена каналов.
+         * Ассоциативный массив каналов. Элементы массива является экземплярами класса Channel2, ключом в массиве является имена каналов.
+         * Программа не должна изменять состояния каналов напрямую в массиве. Для изменения используйте вызовы методов класса.
          * @example
          * // пример обращения к каналу по имени:
          * var channel = lmclient.channels['my_channel_name'];
@@ -417,6 +417,7 @@ class LMClient extends EventEmitter {
          * // общее количество каналов
          * var count = names.length;    
          * @public
+         * @readonly
          * @type {Object.<string, Channel2>}
          */
         this.channels = {};
@@ -519,7 +520,7 @@ class LMClient extends EventEmitter {
      * @param {ChannelOptions} options Параметры канала
      * @returns {boolean} 
      */
-    addChannel(name, type, writeEnable, options = {}) {
+    add(name, type, writeEnable, options = {}) {
         // добавление каналов только в режиме опрос
         if(!this.options.opros) return false;
         // проверка на корректность типа данных
@@ -566,6 +567,26 @@ class LMClient extends EventEmitter {
         // передача на сервер
         if(this.loggedIn) this._sendAll();
         //
+        return true;
+    }
+    /**
+     * Удаление канала или атрибута канала.
+     * Метод выполняет передачу на сервер запроса на удаление канала или отдельного атрибута канала.
+     * При наличии соотвествующих прав доступа клиента, сервер выполняет удаление соответствующей сущности и рассылет уведомления всем
+     * подключенным к нему клиентам, в том числе и вам. При удачном удалении через некоторое время после вызова метода клиент получит 
+     * уведомление {@link LMClient#delete}.
+     * Метод используется при подключении с типом учетной записи "клиент".
+     * @public
+     * @todo пока не реализовано !
+     * @param {string} name - имя канала
+     * @param {number} [attrId] - идентификатор атрибута
+     */
+    delete(name, attrId) {
+        if(!this.options.client) return false;
+        // проверка на наличие канала
+        if(!(name in this.channels)) return false;
+        let channel = this.channels[name];
+
         return true;
     }
     /**

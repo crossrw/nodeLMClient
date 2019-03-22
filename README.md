@@ -68,7 +68,8 @@
     * [.channels](#LMClient+channels) : <code>Object.&lt;string, Channel2&gt;</code>
     * [.connect()](#LMClient+connect)
     * [.disconnect()](#LMClient+disconnect)
-    * [.addChannel(name, type, writeEnable, options)](#LMClient+addChannel) ⇒ <code>boolean</code>
+    * [.add(name, type, writeEnable, options)](#LMClient+add) ⇒ <code>boolean</code>
+    * [.delete(name, [attrId])](#LMClient+delete)
     * [.setValue(name, value)](#LMClient+setValue) ⇒ <code>boolean</code>
     * [.setQuality(name, quality)](#LMClient+setQuality) ⇒ <code>boolean</code>
     * [.sendControl(name, value)](#LMClient+sendControl) ⇒ <code>boolean</code>
@@ -119,10 +120,11 @@
 <a name="LMClient+channels"></a>
 
 ### lmClient.channels : <code>Object.&lt;string, Channel2&gt;</code>
-Ассоциативный массив каналов. Элементы массива является экземплярами класса Channel2.Ключами в массиве является имена каналов.
+Ассоциативный массив каналов. Элементы массива является экземплярами класса Channel2, ключом в массиве является имена каналов.Программа не должна изменять состояния каналов напрямую в массиве. Для изменения используйте вызовы методов класса.
 
 **Kind**: instance property of [<code>LMClient</code>](#LMClient)  
 **Access**: public  
+**Read only**: true  
 **Example**  
 ```js
 // пример обращения к каналу по имени:var channel = lmclient.channels['my_channel_name'];// пример получения массива имен всех каналов:var names = Object.keys(lmclient.channels);// общее количество каналовvar count = names.length;    
@@ -141,9 +143,9 @@
 
 **Kind**: instance method of [<code>LMClient</code>](#LMClient)  
 **Access**: public  
-<a name="LMClient+addChannel"></a>
+<a name="LMClient+add"></a>
 
-### lmClient.addChannel(name, type, writeEnable, options) ⇒ <code>boolean</code>
+### lmClient.add(name, type, writeEnable, options) ⇒ <code>boolean</code>
 Добавление нового канала.Метод добавляет новый канал для регистрации и передачи данных на сервер.Метод используется при подключении с типом учетной записи "опрос".Метод может быть вызван при любом состоянии подключения к сервреру.Метод возвращает значение false если канал с указанным именем уже существует илиесли указан некорректный тип данных.
 
 **Kind**: instance method of [<code>LMClient</code>](#LMClient)  
@@ -155,6 +157,23 @@
 | type | <code>number</code> | Тип канала |
 | writeEnable | <code>boolean</code> | Разрешение записи значений |
 | options | [<code>ChannelOptions</code>](#ChannelOptions) | Параметры канала |
+
+<a name="LMClient+delete"></a>
+
+### lmClient.delete(name, [attrId])
+Удаление канала или атрибута канала.Метод выполняет передачу на сервер запроса на удаление канала или отдельного атрибута канала.При наличии соотвествующих прав доступа клиента, сервер выполняет удаление соответствующей сущности и рассылет уведомления всемподключенным к нему клиентам, в том числе и вам. При удачном удалении через некоторое время после вызова метода клиент получит уведомление [delete](#LMClient+delete).Метод используется при подключении с типом учетной записи "клиент".
+
+**Kind**: instance method of [<code>LMClient</code>](#LMClient)  
+**Access**: public  
+**Todo**
+
+- [ ] пока не реализовано !
+
+
+| Param | Type | Description |
+| --- | --- | --- |
+| name | <code>string</code> | имя канала |
+| [attrId] | <code>number</code> | идентификатор атрибута |
 
 <a name="LMClient+setValue"></a>
 

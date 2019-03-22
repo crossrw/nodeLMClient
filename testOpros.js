@@ -47,31 +47,31 @@ client.on('error', function(err){
 });
 
 // создаем каналы разных типов
-client.addChannel('channel_VT_I1', lm.VT_I1, false, {
+client.add('channel_VT_I1', lm.VT_I1, false, {
     units: 'амперы',
     comment: 'тип VT_UI1',
     enum: ['красный', 'желтый', 'зеленый']
 });
-client.addChannel('channel_VT_R4', lm.VT_R4, false, {
+client.add('channel_VT_R4', lm.VT_R4, false, {
     units: 'омы',
     comment: 'тип VT_R4',
     bounds: [0, 1000]
 });
-client.addChannel('channel_VT_R8', lm.VT_R8, false, {
+client.add('channel_VT_R8', lm.VT_R8, false, {
     units: 'вольты',
     comment: 'тип VT_R8',
     bounds: [0, 1000],
     percentDeadband: 1
 });
-client.addChannel('channel_aVT_I4', lm.VT_I4 + lm.VT_ARRAY, false, {
+client.add('channel_aVT_I4', lm.VT_I4 + lm.VT_ARRAY, false, {
     units: 'кг',
     comment: 'массив VT_I4'
 });
 // проверка активизации канала
-client.addChannel('channel_active', lm.VT_I1, false);
+client.add('channel_active', lm.VT_I1, false);
 client.setValue('channel_active', 10);
 // проверка управления каналом
-client.addChannel('channel_write', lm.VT_I4, true);
+client.add('channel_write', lm.VT_I4, true);
 
 // подключаемся к серверу
 client.connect();
