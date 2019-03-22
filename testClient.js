@@ -42,20 +42,21 @@ client.on('channel', function(channel){
 });
 client.on('delete', function(name, attrId){
     if(attrId === undefined) console.log('channel "' + name + '" was removed');
-    else console.log('attribute ' + attrId + ' was removed from channel "' + name + '" deleted');
+    else console.log('attribute ' + attrId + ' was removed from channel "' + name + '"');
 });
 client.on('change', function(channel){
     console.log('changed channel ' + channel.name);
 });
+client.on('count', function(count){
+    console.log('channels count:' + count);
+});
 client.on('error', function(err){
     console.log(err.message);
 });
-
 // подключаемся к серверу
 client.connect();
 
-setInterval(function(){
-    let count = Object.keys(client.channels).length;
-    console.log('count:'+count);
+setTimeout(function(){
+    client.sendControl('test_channel_3.4', 1.2345);
 
-}, 10000);
+}, 3000);

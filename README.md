@@ -58,7 +58,7 @@
 Класс клиента сервера LM
 
 **Kind**: global class  
-**Emits**: [<code>connecting</code>](#LMClient+event_connecting), [<code>connect</code>](#LMClient+event_connect), [<code>disconnect</code>](#LMClient+event_disconnect), [<code>loggedIn</code>](#LMClient+event_loggedIn), [<code>checkConnection</code>](#LMClient+event_checkConnection), [<code>timeSynchronize</code>](#LMClient+event_timeSynchronize), [<code>control</code>](#LMClient+event_control), [<code>channel</code>](#LMClient+event_channel), [<code>add</code>](#LMClient+event_add), [<code>change</code>](#LMClient+event_change), [<code>delete</code>](#LMClient+event_delete), [<code>error</code>](#LMClient+event_error)  
+**Emits**: [<code>connecting</code>](#LMClient+event_connecting), [<code>connect</code>](#LMClient+event_connect), [<code>disconnect</code>](#LMClient+event_disconnect), [<code>loggedIn</code>](#LMClient+event_loggedIn), [<code>checkConnection</code>](#LMClient+event_checkConnection), [<code>timeSynchronize</code>](#LMClient+event_timeSynchronize), [<code>control</code>](#LMClient+event_control), [<code>channel</code>](#LMClient+event_channel), [<code>add</code>](#LMClient+event_add), [<code>change</code>](#LMClient+event_change), [<code>delete</code>](#LMClient+event_delete), [<code>count</code>](#LMClient+event_count), [<code>error</code>](#LMClient+event_error)  
 
 * [LMClient](#LMClient)
     * [new LMClient(options)](#new_LMClient_new)
@@ -84,6 +84,7 @@
     * ["add"](#LMClient+event_add)
     * ["change"](#LMClient+event_change)
     * ["delete"](#LMClient+event_delete)
+    * ["count"](#LMClient+event_count)
     * ["error"](#LMClient+event_error)
 
 <a name="new_LMClient_new"></a>
@@ -103,6 +104,7 @@
 
 **Kind**: instance property of [<code>LMClient</code>](#LMClient)  
 **Access**: public  
+**Read only**: true  
 <a name="LMClient+connected"></a>
 
 ### lmClient.connected : <code>boolean</code>
@@ -110,10 +112,11 @@
 
 **Kind**: instance property of [<code>LMClient</code>](#LMClient)  
 **Access**: public  
+**Read only**: true  
 <a name="LMClient+checkConnectInterval"></a>
 
 ### lmClient.checkConnectInterval : <code>number</code>
-Интервал проверки связи с сервером в мс. Значение по умолчанию 480000 мс (8 минут).
+Интервал проверки связи с сервером в мс. Значение по умолчанию 480000 мс (8 минут). Не рекомендуется устанавливать значение более 600000 мс (10 минут).
 
 **Kind**: instance property of [<code>LMClient</code>](#LMClient)  
 **Access**: public  
@@ -161,20 +164,20 @@
 <a name="LMClient+delete"></a>
 
 ### lmClient.delete(name, [attrId])
-Удаление канала или атрибута канала.Метод выполняет передачу на сервер запроса на удаление канала или отдельного атрибута канала.При наличии соотвествующих прав доступа клиента, сервер выполняет удаление соответствующей сущности и рассылет уведомления всемподключенным к нему клиентам, в том числе и вам. При удачном удалении через некоторое время после вызова метода клиент получит уведомление ["delete"](#LMClient+event_delete).Метод используется при подключении с типом учетной записи "клиент".
+Удаление канала или атрибута канала.Метод выполняет передачу на сервер запроса на удаление канала или отдельного атрибута канала.При вызове метода клиент должен быть подключен и зарегистрирован на сервере.При наличии соотвествующих прав доступа клиента, сервер выполняет удаление соответствующей сущности и рассылет уведомления всемподключенным к нему клиентам, в том числе и вам. При удачном удалении через некоторое время после вызова метода клиент получит уведомление ["delete"](#LMClient+event_delete).Метод используется при подключении с типом учетной записи "клиент".
 
 **Kind**: instance method of [<code>LMClient</code>](#LMClient)  
 **Access**: public  
-**Todo**
-
-- [ ] пока не реализовано !
-
 
 | Param | Type | Description |
 | --- | --- | --- |
 | name | <code>string</code> | имя канала |
 | [attrId] | <code>number</code> | идентификатор атрибута |
 
+**Example**  
+```js
+// удаление атрибута с идентификатором 100 к канала 'myChannel'client.delete('myChannel', 100);// удпление канала 'myChannel'client.delete('myChannel');
+```
 <a name="LMClient+setValue"></a>
 
 ### lmClient.setValue(name, value) ⇒ <code>boolean</code>
@@ -354,6 +357,18 @@ client.on('control', function(control){  console.log('receive control "' + cont
 ```js
 client.on('delete', function(name, attrId){  if(attrId === undefined) console.log('channel "' + name + '" was removed');  else console.log('attribute ' + attrId + ' was removed from channel "' + name + '" deleted');});
 ```
+<a name="LMClient+event_count"></a>
+
+### "count"
+Событие формируется для учетных записей типа "клиент" после подключения к серверу и запроса списка имеющихся каналов.
+
+**Kind**: event emitted by [<code>LMClient</code>](#LMClient)  
+**Properties**
+
+| Name | Type | Description |
+| --- | --- | --- |
+| count | <code>number</code> | количество каналов |
+
 <a name="LMClient+event_error"></a>
 
 ### "error"
@@ -466,7 +481,6 @@ client.on('delete', function(name, attrId){  if(attrId === undefined) console.l
 
 * Поддержка только каналов второго типа
 * Не реализована возможность изменения значений атрибутов каналов
-* Не реализована возможность удаления атрибутов и каналов
 
 ## Текущий статус
 

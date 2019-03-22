@@ -330,6 +330,11 @@ function win1251toUtf8(s) {
  * @property {number} [attrId] - идентификатор атрибута
 */
 /**
+ * Событие формируется для учетных записей типа "клиент" после подключения к серверу и запроса списка имеющихся каналов.
+ * @event LMClient#count
+ * @property {number} count - количество каналов
+*/
+/**
  * Событие формируется при возникновении ошибки. Программа должна содержать обработчик этого события.
  * @event LMClient#error
  * @property {Error} error - ошибка
@@ -347,6 +352,7 @@ function win1251toUtf8(s) {
  * @fires LMClient#add
  * @fires LMClient#change
  * @fires LMClient#delete
+ * @fires LMClient#count
  * @fires LMClient#error
  */
 class LMClient extends EventEmitter {
@@ -383,6 +389,7 @@ class LMClient extends EventEmitter {
          * Текущее состояние регистрации на сервере.
          * Значение true соответствует тому, что клиент успешно подключен и зарегестрирован на сервере.
          * @public
+         * @readonly
          * @type {boolean}
          */
         this.loggedIn = false;                      // клиент зарегистрирован на сервере
@@ -391,6 +398,7 @@ class LMClient extends EventEmitter {
          * Значение true соответствует тому, что клиент установил соединение с сервером. Состояние регистрации можно
          * проконтролировать через свойство loggedIn.
          * @public
+         * @readonly
          * @type {boolean}
          */
         this.connected = false;
@@ -400,7 +408,7 @@ class LMClient extends EventEmitter {
         this.checkConnTimer = null;                 // таймер проверки связи
         /**
          * Интервал проверки связи с сервером в мс. 
-         * Значение по умолчанию 480000 мс (8 минут).
+         * Значение по умолчанию 480000 мс (8 минут). Не рекомендуется устанавливать значение более 600000 мс (10 минут).
          * @public
          * @type {number}
          */
@@ -525,7 +533,7 @@ class LMClient extends EventEmitter {
         // проверка на корректность типа данных
         if(!validTypes.includes(type & VT_MASK)) return false;
         // проверка на дублирование имени
-        if(name in this.channels) return false;
+        if(this._getChannel(name)) return false;
         // создаем канал
         /** @type {Channel2} */
         var channel = {
@@ -571,21 +579,51 @@ class LMClient extends EventEmitter {
     /**
      * Удаление канала или атрибута канала.
      * Метод выполняет передачу на сервер запроса на удаление канала или отдельного атрибута канала.
+     * При вызове метода клиент должен быть подключен и зарегистрирован на сервере.
      * При наличии соотвествующих прав доступа клиента, сервер выполняет удаление соответствующей сущности и рассылет уведомления всем
      * подключенным к нему клиентам, в том числе и вам. При удачном удалении через некоторое время после вызова метода клиент получит 
      * уведомление {@link #LMClient+event_delete "delete"}.
      * Метод используется при подключении с типом учетной записи "клиент".
+     * @example
+     * // удаление атрибута с идентификатором 100 к канала 'myChannel'
+     * client.delete('myChannel', 100);
+     * // удпление канала 'myChannel'
+     * client.delete('myChannel');
      * @public
-     * @todo пока не реализовано !
      * @param {string} name - имя канала
      * @param {number} [attrId] - идентификатор атрибута
      */
     delete(name, attrId) {
-        if(!this.options.client) return false;
+        // проверка регистрации и типа подключения
+        if(!(this.loggedIn && this.options.client)) return false;
         // проверка на наличие канала
-        if(!(name in this.channels)) return false;
-        let channel = this.channels[name];
-
+        let channel = this._getChannel(name);
+        if(!channel) return false;
+        //
+        let buf = Buffer.allocUnsafe(13);
+        // Cmd          UI1     66
+        // eslint-disable-next-line no-unused-vars
+        let offset = buf.writeUInt8(66, 0);
+        // Size         UI2     13
+        offset = buf.writeUInt16LE(13, offset);
+        // Flag         UI1     00000001
+        offset = buf.writeUInt8(1, offset);
+        // Number       UI4
+        offset = buf.writeUInt32LE(channel.number, offset);
+        // ActionType   UI1
+        if(attrId === undefined) {
+            // удаляю канал
+            offset = buf.writeUInt8(1, offset);
+            offset = buf.writeUInt32LE(0, offset);
+        } else {
+            // проверка наличия атрибута
+            if(!(attrId in channel.attributes)) return false;
+            // удаляю атрибут
+            offset = buf.writeUInt8(2, offset);
+            offset = buf.writeUInt32LE(attrId, offset);
+        }
+        // передача
+        this.socket.write(buf);
         return true;
     }
     /**
@@ -604,8 +642,8 @@ class LMClient extends EventEmitter {
         // установка значения только в режиме опрос
         if(!this.options.opros) return false;
         // проверка на наличие канала
-        if(!(name in this.channels)) return false;
-        let channel = this.channels[name];
+        let channel = this._getChannel(name);
+        if(!channel) return false;
         // проверка на изменения
         if((channel.quality == stOk) && (channel.value == value)) return true;
         // фильтрация значений с плавающей точкой
@@ -654,8 +692,9 @@ class LMClient extends EventEmitter {
         // качество stOk устанавливать нельзя, вместо этого нужно установить значение канала
         if(quality == stOk) return false;
         // проверка на наличие канала
-        if(!(name in this.channels)) return false;
-        let channel = this.channels[name];
+        let channel = this._getChannel(name);
+        if(!channel) return false;
+        //
         if(channel.quality == quality) return true;
         //
         channel.quality = quality;
@@ -872,9 +911,10 @@ class LMClient extends EventEmitter {
                 // ответ на запрос всех каналов (получение количествоа каналов)
                 // Size             VT_UI2
                 // let size = data.readUInt16LE(offset);
-                // offset += 2;
-                // let tagCount = data.readUInt32LE(offset);
-                // offset += 4;
+                offset += 2;
+                let tagCount = data.readUInt32LE(offset);
+                offset += 4;
+                this.emit('count', tagCount);
                 break;
             }
             case 54: {
@@ -984,7 +1024,9 @@ class LMClient extends EventEmitter {
                 let owner = data.readInt16LE(offset);
                 offset += 2;
                 // такой канал есть?
-                if(!(channelName in this.channels)) break;
+                let channel = this._getChannel(channelName);
+                if(!channel) break;
+                //
                 if(flags & 8) {
                     // пришла команда управления каналом
                     if(quality == stOk) {
@@ -997,7 +1039,6 @@ class LMClient extends EventEmitter {
                     }
                 } else {
                     // пришло изменение состояния канала (режим клиент)
-                    let channel = this.channels[channelName];
                     channel.value = cvt.value;
                     channel.quality = quality;
                     channel.dt = channelTime;
@@ -1109,11 +1150,10 @@ class LMClient extends EventEmitter {
                 channel.groups = data.readUInt32LE(offset);
                 offset += 4;
                 // разбор
-                if(channel.name in this.channels) {
+                let ch = this._getChannel(channel.name);
+                if(ch) {
                     // канал уже существует, изменились настройки
                     // поменяться могут атрибуты и флаги
-                    let ch = this.channels[channel.name];
-                    //
                     ch.active = channel.active;
                     ch.writeEnable = channel.writeEnable;
                     ch.saveServer = channel.saveServer;
@@ -1170,10 +1210,10 @@ class LMClient extends EventEmitter {
                     });
                 }
                 // разбор принятого
-                if(channelName in this.channels) {
+                let channel = this._getChannel(channelName);
+                if(channel) {
                     // такой канал у нас есть
                     this.channelsNumbers[channelNumber] = channelName;
-                    let channel = this.channels[channelName];
                     channel.number = channelNumber;
                     let oldActive = channel.active;
                     channel.active = !!(flags & 1);
@@ -1189,6 +1229,8 @@ class LMClient extends EventEmitter {
                             channel.needSend = false;
                         }
                     }
+                } else {
+                    // такого канала нет, очень странно...
                 }
                 //
                 break;
@@ -1218,8 +1260,9 @@ class LMClient extends EventEmitter {
                 let attrId = data.readUInt16LE(offset);
                 // проверка наличия канала
                 if(channelName === null) break;
-                if(!(channelName in this.channels)) break;
-                let channel = this.channels[channelName];
+                //
+                let channel = this._getChannel(channelName);
+                if(!channel) break;
                 //
                 if(flags & 2) {
                     // удаление канала
@@ -1282,12 +1325,14 @@ class LMClient extends EventEmitter {
                 // ActionType       VT_UI1
                 let actionType = data.readUInt8(offset++);
                 // ActionData       VT_UI4
-                let actionData = data.readUInt32(offset);
+                let actionData = data.readUInt32LE(offset);
                 offset += 4;
                 // проверка наличия канала
                 if(channelName === null) break;
-                if(!(channelName in this.channels)) break;
-                let channel = this.channels[channelName];
+                let channel = this._getChannel(channelName);
+                if(!channel) break;
+                // при сброшенном старшем бите уведомление об ошибке операции удаления
+                if(!(flags & 128)) break;
                 //
                 switch(actionType) {
                     case 1: {
@@ -1400,8 +1445,9 @@ class LMClient extends EventEmitter {
         // Quality      UI1
         // Type         UI2
         // Value        VARTYPE
-        if(!(name in this.channels)) return false;
-        let channel = this.channels[name];
+        let channel = this._getChannel(name);
+        if(!channel) return false;
+        //
         if(!(channel.active && channel.writeEnable && ('creator' in channel))) return false;
         //
         var buf = Buffer.allocUnsafe(4096);
@@ -1438,7 +1484,7 @@ class LMClient extends EventEmitter {
         // LoVer        UI1
         // Flags        UI1
         // Reserved:    UI1[7]  должны быть 0
-        var buf = Buffer.alloc(72);
+        let buf = Buffer.alloc(72);
         //
         let offset = buf.writeUInt8(42, 0);
         //
@@ -1912,13 +1958,29 @@ class LMClient extends EventEmitter {
      * Возвращает имя канала по его номеру
      * @private
      * @param {number} number номер канала
-     * @returns {string}
+     * @returns {?string}
      */
     _channelNameByNumber(number) {
         if(number in this.channelsNumbers) {
             return this.channelsNumbers[number];
         } else {
             return null;
+        }
+    }
+    /**
+     * Возвращает канал по имени или идентификатору на сервере
+     * @private
+     * @param {string|number} id имя или числовой идентификтор
+     * @returns {?Channel2}
+     */
+    _getChannel(id) {
+        if(typeof id === 'string') {
+            if(id in this.channels) return this.channels[id]; else return null;
+        } else {
+            if(id in this.channelsNumbers) {
+                let name = this.channelsNumbers[id];
+                if(name in this.channels) return this.channels[name]; else return null;
+            } return null;
         }
     }
     /**
