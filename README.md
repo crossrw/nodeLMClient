@@ -4,6 +4,8 @@
 
 Библиотека предназначена для организации подключения к серверу SCADA системы LanMon из программ написанных на языке js.
 
+Для выполнения необходим Node.js версии 6.17.0 или более новый.
+
 Более подробное описание SCADA системы LanMon можно получить на [сайте МНПП "Сатурн"](https://www.mnppsaturn.ru/?topic_id=3&good_id=184).
 
 Основные функции библиотеки:
@@ -65,7 +67,7 @@
     * [.loggedIn](#LMClient+loggedIn) : <code>boolean</code>
     * [.connected](#LMClient+connected) : <code>boolean</code>
     * [.checkConnectInterval](#LMClient+checkConnectInterval) : <code>number</code>
-    * [.channels](#LMClient+channels) : <code>Object.&lt;string, Channel2&gt;</code>
+    * [.channelsMap](#LMClient+channelsMap) : <code>Map.&lt;string, Channel2&gt;</code>
     * [.connect()](#LMClient+connect)
     * [.disconnect()](#LMClient+disconnect)
     * [.add(name, type, writeEnable, options)](#LMClient+add) ⇒ <code>boolean</code>
@@ -120,17 +122,17 @@
 
 **Kind**: instance property of [<code>LMClient</code>](#LMClient)  
 **Access**: public  
-<a name="LMClient+channels"></a>
+<a name="LMClient+channelsMap"></a>
 
-### lmClient.channels : <code>Object.&lt;string, Channel2&gt;</code>
-Ассоциативный массив каналов. Элементы массива является экземплярами класса [Channel2](#Channel2), ключом в массиве являются имена каналов.Вы не должны напрямую изменять элементы массиве. Для изменения используйте вызовы методов класса.
+### lmClient.channelsMap : <code>Map.&lt;string, Channel2&gt;</code>
+Список каналов. Элементы списка является экземплярами класса [Channel2](#Channel2), ключом в списке являются имена каналов.Вы не должны напрямую изменять элементы списка! Для изменения используйте вызовы методов класса.
 
 **Kind**: instance property of [<code>LMClient</code>](#LMClient)  
 **Access**: public  
 **Read only**: true  
 **Example**  
 ```js
-// пример обращения к каналу по имени:var channel = lmclient.channels['my_channel_name'];// пример получения массива имен всех каналов:var names = Object.keys(lmclient.channels);// общее количество каналовvar count = names.length;    
+// получение канала по имениchannel = client.channelsMap.get('my_channel_name');// проверка на наличие каналаif(client.channelsMap.has('my_channel_name')) {...}; else {...};// перебор всех каналовclient.channelsMap.forEach(channel => {...});// получение количества каналовlet count = client.channelsMap.size;
 ```
 <a name="LMClient+connect"></a>
 

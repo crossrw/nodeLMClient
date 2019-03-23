@@ -414,20 +414,22 @@ class LMClient extends EventEmitter {
          */
         this.checkConnectInterval = 480000;
         /**
-         * Ассоциативный массив каналов. Элементы массива является экземплярами класса {@link Channel2}, ключом в массиве являются имена каналов.
-         * Вы не должны напрямую изменять элементы массиве. Для изменения используйте вызовы методов класса.
+         * Список каналов. Элементы списка является экземплярами класса {@link Channel2}, ключом в списке являются имена каналов.
+         * Вы не должны напрямую изменять элементы списка! Для изменения используйте вызовы методов класса.
          * @example
-         * // пример обращения к каналу по имени:
-         * var channel = lmclient.channels['my_channel_name'];
-         * // пример получения массива имен всех каналов:
-         * var names = Object.keys(lmclient.channels);
-         * // общее количество каналов
-         * var count = names.length;    
+         * // получение канала по имени
+         * channel = client.channelsMap.get('my_channel_name');
+         * // проверка на наличие канала
+         * if(client.channelsMap.has('my_channel_name')) {...}; else {...};
+         * // перебор всех каналов
+         * client.channelsMap.forEach(channel => {...});
+         * // получение количества каналов
+         * let count = client.channelsMap.size;
          * @public
          * @readonly
-         * @type {Object.<string, Channel2>}
+         * @type {Map<string,Channel2>}
          */
-        this.channels = {};
+        this.channelsMap = new Map();
         /**
          * ассоциативный массив номеров каналов на сервере
          * @private
@@ -489,9 +491,7 @@ class LMClient extends EventEmitter {
             this.checkConnTimer = null;
         }
         // сброс состояния каналов
-        Object.keys(this.channels).forEach(name => {
-            /** @type {Channel2} */
-            let channel = _this.channels[name];
+        this.channelsMap.forEach(channel => {
             if('creator' in channel) {
                 // канал полученный от сервера в режиме "клиент"
                 if(channel.quality != stOff) {
@@ -533,7 +533,7 @@ class LMClient extends EventEmitter {
         // проверка на корректность типа данных
         if(!validTypes.includes(type & VT_MASK)) return false;
         // проверка на дублирование имени
-        if(this._getChannel(name)) return false;
+        if(this.channelsMap.has(name)) return false;
         // создаем канал
         /** @type {Channel2} */
         var channel = {
@@ -570,7 +570,7 @@ class LMClient extends EventEmitter {
             channel.attributes[ATTR_PERCENTDB] = this._createAttribute(ATTR_PERCENTDB, options.percentDeadband);
         }
         // добавляем канал
-        this.channels[name] = channel;
+        this.channelsMap.set(name, channel);
         // передача на сервер
         if(this.loggedIn) this._sendAll();
         //
@@ -598,7 +598,7 @@ class LMClient extends EventEmitter {
         // проверка регистрации и типа подключения
         if(!(this.loggedIn && this.options.client)) return false;
         // проверка на наличие канала
-        let channel = this._getChannel(name);
+        let channel = this.channelsMap.get(name);
         if(!channel) return false;
         //
         let buf = Buffer.allocUnsafe(13);
@@ -643,7 +643,7 @@ class LMClient extends EventEmitter {
         // установка значения только в режиме опрос
         if(!this.options.opros) return false;
         // проверка на наличие канала
-        let channel = this._getChannel(name);
+        let channel = this.channelsMap.get(name);
         if(!channel) return false;
         // проверка типа и значения
         if(!this._checkValue(value, channel.type)) return false;
@@ -695,7 +695,7 @@ class LMClient extends EventEmitter {
         // качество stOk устанавливать нельзя, вместо этого нужно установить значение канала
         if(quality == stOk) return false;
         // проверка на наличие канала
-        let channel = this._getChannel(name);
+        let channel = this.channelsMap.get(name);
         if(!channel) return false;
         //
         if(channel.quality == quality) return true;
@@ -987,7 +987,7 @@ class LMClient extends EventEmitter {
                 channel.groups = data.readUInt32LE(offset);
                 offset += 4;
                 // сохраняем канал
-                this.channels[channel.name] = channel;
+                this.channelsMap.set(channel.name, channel);
                 this.channelsNumbers[channel.number] = channel.name;
                 // отправляем событие
                 this.emit('channel', channel);
@@ -1027,7 +1027,7 @@ class LMClient extends EventEmitter {
                 let owner = data.readInt16LE(offset);
                 offset += 2;
                 // такой канал есть?
-                let channel = this._getChannel(channelName);
+                let channel = this.channelsMap.get(channelName);
                 if(!channel) break;
                 //
                 if(flags & 8) {
@@ -1082,10 +1082,11 @@ class LMClient extends EventEmitter {
                 // AttributeDT      VT_R8
                 let attrTime = this._dateTimeToDate(data.readDoubleLE(offset));
                 offset += 8;
-                // сохраняем атрибут
-                if(typeof channelName === 'string') {
-                    // если имя канала не null
-                    this.channels[channelName].attributes[attrId] = {
+                // такой канал есть?
+                let channel = this.channelsMap.get(channelName);
+                if(channel) {
+                    // сохраняем атрибут
+                    channel.attributes[attrId] = {
                         'id':       attrId,
                         'value':    vtv.value,
                         'dt':       attrTime,
@@ -1153,7 +1154,7 @@ class LMClient extends EventEmitter {
                 channel.groups = data.readUInt32LE(offset);
                 offset += 4;
                 // разбор
-                let ch = this._getChannel(channel.name);
+                let ch = this.channelsMap.get(channel.name);
                 if(ch) {
                     // канал уже существует, изменились настройки
                     // поменяться могут атрибуты и флаги
@@ -1167,7 +1168,7 @@ class LMClient extends EventEmitter {
                 } else {
                     // добавлен новый канал
                     channel.dt = new Date();
-                    this.channels[channel.name] = channel;
+                    this.channelsMap.set(channel.name, channel);
                     this.channelsNumbers[channel.number] = channel.name;
                     // уведомление о добавлении канала
                     this.emit('add', channel);
@@ -1213,7 +1214,7 @@ class LMClient extends EventEmitter {
                     });
                 }
                 // разбор принятого
-                let channel = this._getChannel(channelName);
+                let channel = this.channelsMap.get(channelName);
                 if(channel) {
                     // такой канал у нас есть
                     this.channelsNumbers[channelNumber] = channelName;
@@ -1264,13 +1265,13 @@ class LMClient extends EventEmitter {
                 // проверка наличия канала
                 if(channelName === null) break;
                 //
-                let channel = this._getChannel(channelName);
+                let channel = this.channelsMap(channelName);
                 if(!channel) break;
                 //
                 if(flags & 2) {
                     // удаление канала
                     delete this.channelsNumbers[channel.number];
-                    delete this.channels[channelName];
+                    this.channelsMap.delete(channelName);
                     // событие удаления канала
                     this.emit('delete', channelName);
                 } else
@@ -1332,7 +1333,7 @@ class LMClient extends EventEmitter {
                 offset += 4;
                 // проверка наличия канала
                 if(channelName === null) break;
-                let channel = this._getChannel(channelName);
+                let channel = this.channelsMap.get(channelName);
                 if(!channel) break;
                 // при сброшенном старшем бите уведомление об ошибке операции удаления
                 if(!(flags & 128)) break;
@@ -1341,7 +1342,7 @@ class LMClient extends EventEmitter {
                     case 1: {
                         // удаление канала
                         delete this.channelsNumbers[channel.number];
-                        delete this.channels[channelName];
+                        this.channelsMap.delete(channelName);
                         // событие удаления канала
                         this.emit('delete', channelName);
                         break;
@@ -1448,7 +1449,7 @@ class LMClient extends EventEmitter {
         // Quality      UI1
         // Type         UI2
         // Value        VARTYPE
-        let channel = this._getChannel(name);
+        let channel = this.channelsMap.get(name);
         if(!channel) return false;
         //
         if(!(channel.active && channel.writeEnable && ('creator' in channel))) return false;
@@ -1558,8 +1559,7 @@ class LMClient extends EventEmitter {
      * @private
      */
     _sendAll() {
-        Object.keys(this.channels).forEach(name => {
-            let channel = this.channels[name];
+        this.channelsMap.forEach(channel => {
             // регистрация каналов
             if(channel.needRegister) {
                 this._registerChannel(channel);
@@ -1970,22 +1970,6 @@ class LMClient extends EventEmitter {
             return this.channelsNumbers[number];
         } else {
             return null;
-        }
-    }
-    /**
-     * Возвращает канал по имени или идентификатору на сервере
-     * @private
-     * @param {string|number} id имя или числовой идентификтор
-     * @returns {?Channel2}
-     */
-    _getChannel(id) {
-        if(typeof id === 'string') {
-            if(id in this.channels) return this.channels[id]; else return null;
-        } else {
-            if(id in this.channelsNumbers) {
-                let name = this.channelsNumbers[id];
-                if(name in this.channels) return this.channels[name]; else return null;
-            } return null;
         }
     }
     /**
