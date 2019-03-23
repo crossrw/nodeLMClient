@@ -476,7 +476,6 @@ class LMClient extends EventEmitter {
      * @public
      */
     disconnect() {
-        var _this = this;
         this.connected = false;
         this.loggedIn = false;
         this.waitStatus = 0;
