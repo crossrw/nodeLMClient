@@ -645,6 +645,8 @@ class LMClient extends EventEmitter {
         // проверка на наличие канала
         let channel = this._getChannel(name);
         if(!channel) return false;
+        // проверка типа и значения
+        if(!this._checkValue(value, channel.type)) return false;
         // проверка на изменения
         if((channel.quality == stOk) && (channel.value == value)) return true;
         // фильтрация значений с плавающей точкой
@@ -1450,6 +1452,8 @@ class LMClient extends EventEmitter {
         if(!channel) return false;
         //
         if(!(channel.active && channel.writeEnable && ('creator' in channel))) return false;
+        // проверка типа и значения
+        if(!this._checkValue(value, channel.type)) return false;
         //
         var buf = Buffer.allocUnsafe(4096);
         // Cmd          UI1     55
@@ -2000,6 +2004,46 @@ class LMClient extends EventEmitter {
             saveServer: false,
             attributes: {}
         };
+    }
+    /**
+     * Проверка значения на соответствие типу
+     * @private
+     * @param {*} value значение
+     * @param {number} type тип
+     * @returns {boolean}
+     */
+    _checkValue(value, type) {
+        if(type&VT_ARRAY) {
+            return Array.isArray(value);
+        } else {
+            switch(type & VT_MASK) {
+                case VT_EMPTY:
+                    return true;
+                case VT_I1:
+                    return (typeof value === 'number')&&(value >= -128)&&(value <= 127);
+                case VT_I2:
+                    return (typeof value === 'number')&&(value >= -32768)&&(value <= 32767);
+                case VT_I4:
+                    return (typeof value === 'number')&&(value >= -2147483648)&&(value <= 2147483647);
+                case VT_R4:
+                case VT_R8:
+                    return (typeof value === 'number');
+                case VT_DATE:
+                    return (typeof value.getMonth === 'function');
+                case VT_BOOL:
+                    return (typeof value === 'boolean');
+                case VT_UI1:
+                    return (typeof value === 'number')&&(value >= 0)&&(value <= 255);
+                case VT_UI2:
+                    return (typeof value === 'number')&&(value >= 0)&&(value <= 65535);
+                case VT_UI4:
+                    return (typeof value === 'number')&&(value >= 0)&&(value <= 4294967295);
+                case VT_STRING:
+                    return (typeof value === 'string');
+            }
+            // неизвестный тип
+            return false;
+        }
     }
 }
 
