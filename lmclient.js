@@ -1262,9 +1262,7 @@ class LMClient extends EventEmitter {
                 // AttrId           VT_UI2
                 let attrId = data.readUInt16LE(offset);
                 // проверка наличия канала
-                if(channelName === null) break;
-                //
-                let channel = this.channelsMap(channelName);
+                let channel = this.channelsMap.get(channelName);
                 if(!channel) break;
                 //
                 if(flags & 2) {
