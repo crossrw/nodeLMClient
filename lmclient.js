@@ -7,8 +7,8 @@
 const EventEmitter = require('events');
 const net = require('net');
 
-const clientHiVersion = 0;                  // версия клиента
-const clientLoVersion = 1;
+const clientHiVersion = 1;                  // версия клиента
+const clientLoVersion = 0;
 
 // значения свойства quality канала
 const stOk              = 0;                // ok

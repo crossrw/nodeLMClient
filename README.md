@@ -1,3 +1,8 @@
+[![NPM version][https://img.shields.io/npm/v/nodelmclient.svg?style=flat-square]][https://www.npmjs.com/package/nodelmclient]
+![node](https://img.shields.io/node/v/nodelmclient.svg?style=flat-square)
+[![npm module downloads](http://img.shields.io/npm/dt/nodelmclient.svg)](https://www.npmjs.org/package/nodelmclient)
+![APM](https://img.shields.io/apm/l/nodelmclient.svg?style=flat-square)
+
 # Клиент SCADA системы LanMon для Node.js
 
 ## Назначение
@@ -25,6 +30,12 @@
 Библиотека поддерживает работу с сервером LanMon начиная с его версии 4.12.
 
 Библиотека не содержит внешних зависимостей.
+
+## Установка
+
+```
+$ npm install nodelmclient
+```
 
 ## Classes
 

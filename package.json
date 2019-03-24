@@ -1,23 +1,23 @@
 {
-  "name": "lmclient",
-  "version": "1.0.0",
-  "description": "Node.js client for SCADA system Lanmon",
+  "name": "nodelmclient",
+  "version": "0.1.0",
+  "description": "Node.js client for SCADA Lanmon",
   "main": "lmclient.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/crossrw/nodeLMClient"
+    "url": "git+https://github.com/crossrw/nodeLMClient.git"
   },
   "keywords": [
-    "scada",
+    "SCADA",
     "lanmon"
   ],
-  "author": "MNPP Saturn",
+  "author": "Alexey Lutovinin",
   "license": "MIT",
-  "homepage": "https://github.com/crossrw/nodeLMClient",
-  "devDependencies": {
-    "eslint": "^5.15.3"
-  }
+  "bugs": {
+    "url": "https://github.com/crossrw/nodeLMClient/issues"
+  },
+  "homepage": "https://github.com/crossrw/nodeLMClient#readme"
 }
