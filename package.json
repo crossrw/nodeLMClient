@@ -1,5 +1,5 @@
 {
-  "name": "nodelmclient",
+  "name": "lmclient",
   "version": "0.1.0",
   "description": "Node.js client for SCADA Lanmon",
   "main": "lmclient.js",
@@ -14,6 +14,9 @@
     "SCADA",
     "lanmon"
   ],
+  "engines": {
+    "node": ">=6.17.0"
+  },
   "author": "Alexey Lutovinin",
   "license": "MIT",
   "bugs": {
