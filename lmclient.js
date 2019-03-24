@@ -1556,18 +1556,25 @@ class LMClient extends EventEmitter {
      * @private
      */
     _sendAll() {
+        // буфер для сборки структур
+        let buf = Buffer.allocUnsafe(0);
+        // перебор каналов
         this.channelsMap.forEach(channel => {
             // регистрация каналов
             if(channel.needRegister) {
-                this._registerChannel(channel);
+                // this._registerChannel(channel);
+                buf = Buffer.concat([buf, this._registerChannel(channel, true)]);
                 channel.needRegister = false;
             }
             // отправка данных
             if(channel.needSend && channel.active) {
-                this._sendChannel(channel);
+                // this._sendChannel(channel);
+                buf = Buffer.concat([buf, this._sendChannel(channel, true)]);
                 channel.needSend = false;
             }
         });
+        // передача на сервер
+        if(buf.length > 0) this.socket.write(buf);
     }
     /**
      * Регистрация канала на сервере
