@@ -1573,8 +1573,10 @@ class LMClient extends EventEmitter {
      * Регистрация канала на сервере
      * @private
      * @param {Channel2} channel регистрируемый канал
+     * @param {boolean} tobuf записать в буфер и вернуть его в результате
+     * @returns {Buffer?}
      */
-    _registerChannel(channel) {
+    _registerChannel(channel, tobuf) {
         // Cmd          UI1         51      команда
         // Size         UI2                 размер
         // Flag         UI2                 флаги
@@ -1613,15 +1615,23 @@ class LMClient extends EventEmitter {
         buf.writeUInt16LE(attrCount, attrCountOffset);
         // добавляем размер структуры
         buf.writeUInt16LE(offset, 1);
-        // передача на сервер
-        this.socket.write(buf.slice(0, offset));
+        // запись
+        if(tobuf) {
+            // запись в буфер
+            return buf.slice(0, offset);
+        } else {
+            // передача на сервер
+            this.socket.write(buf.slice(0, offset));
+        }
     }
     /**
      * Отправка канала на сервер
      * @private
-     * @param {Channel2} channel 
+     * @param {Channel2} channel канал
+     * @param {boolean} tobuf записать в буфер и вернуть его в результате
+     * @returns {Buffer?}
      */
-    _sendChannel(channel) {
+    _sendChannel(channel, tobuf) {
         // Cmd              UI1         55                  команда
         // Size             UI2                             размер
         // Flag             UI1                             флаги
@@ -1659,8 +1669,14 @@ class LMClient extends EventEmitter {
         }
         // добавляем размер структуры
         buf.writeUInt16LE(offset, 1);
-        // передача на сервер
-        this.socket.write(buf.slice(0, offset));
+        // запись
+        if(tobuf) {
+            // запись в буфер
+            return buf.slice(0, offset);
+        } else {
+            // передача на сервер
+            this.socket.write(buf.slice(0, offset));
+        }
     }
     /**
      * Создание объекта атрибута канала
