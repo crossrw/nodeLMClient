@@ -1,7 +1,7 @@
 ![npm](https://img.shields.io/npm/v/lmclient.svg?style=flat-square)
 ![node](https://img.shields.io/node/v/lmclient.svg?style=flat-square)
 ![npm module downloads](http://img.shields.io/npm/dt/lmclient.svg)
-![APM](https://img.shields.io/apm/l/lmclient.svg?style=flat-square)
+![NPM](https://img.shields.io/npm/l/lmclient.svg?style=flat-square)
 
 # Клиент SCADA системы LanMon для Node.js
 
