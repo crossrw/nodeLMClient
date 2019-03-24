@@ -1,6 +1,6 @@
 {
   "name": "lmclient",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Node.js client for SCADA Lanmon",
   "main": "lmclient.js",
   "scripts": {
