@@ -327,7 +327,7 @@ function win1251toUtf8(s) {
  * });
  * @event LMClient#delete
  * @property {string} name - имя канала
- * @property {number} [attrId] - идентификатор атрибута
+ * @property {(number|undefined)} [attrId] - идентификатор атрибута
 */
 /**
  * Событие формируется для учетных записей типа "клиент" после подключения к серверу и запроса списка имеющихся каналов.
