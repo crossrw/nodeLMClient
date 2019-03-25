@@ -1,7 +1,8 @@
-![node](https://img.shields.io/node/v/lmclient.svg?style=flat-square)
-![npm](https://img.shields.io/npm/v/lmclient.svg?style=flat-square)
-![npm module downloads](http://img.shields.io/npm/dt/lmclient.svg?style=flat-square)
-![license](https://img.shields.io/npm/l/lmclient.svg?style=flat-square)
+[![node](https://img.shields.io/node/v/lmclient.svg?style=flat-square)](https://nodejs.org)
+[![npm](https://img.shields.io/npm/v/lmclient.svg?style=flat-square)](https://www.npmjs.com/package/lmclient)
+[![npm bundle size](https://img.shields.io/bundlephobia/min/lmclient.svg?style=flat-square)](https://www.npmjs.com/package/lmclient)
+[![npm module downloads](http://img.shields.io/npm/dt/lmclient.svg?style=flat-square)](https://www.npmjs.com/package/lmclient)
+[![license](https://img.shields.io/npm/l/lmclient.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 
 # Клиент SCADA системы LanMon для Node.js
 
