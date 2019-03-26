@@ -2,6 +2,7 @@
 [![npm](https://img.shields.io/npm/v/lmclient.svg?style=flat-square)](https://www.npmjs.com/package/lmclient)
 [![npm bundle size](https://img.shields.io/bundlephobia/min/lmclient.svg?style=flat-square)](https://www.npmjs.com/package/lmclient)
 [![npm module downloads](http://img.shields.io/npm/dt/lmclient.svg?style=flat-square)](https://www.npmjs.com/package/lmclient)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/d1954134bb304c5599e8b3fa30553e97)](https://www.codacy.com/app/crossrw/nodeLMClient?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=crossrw/nodeLMClient&amp;utm_campaign=Badge_Grade)
 [![license](https://img.shields.io/npm/l/lmclient.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 
 # Клиент SCADA системы LanMon для Node.js
@@ -241,10 +242,7 @@ $ npm install lmclient
 Формирование команды управления каналом. Метод используется при подключении с типом учетной записи "клиент".Для выполнения управления каналом должны выполняться следующие условия: клиент должен быть подключен и зарегистрирован на сервере,канал должен быть существующим, канал должен быть создан другим клиентом (опросчиком), у канала должны быть установлены признаки активности и разрешения записи значений, тип значения value должен быть совместим с типом канала.При выполнении перечисленных выше условий метод возвращает true, иначе - false.Метод не устанавливает значение канала, полученную команду управления сервер пересылает клиенту типа "опрос", который сформировал этот канал.
 
 **Kind**: instance method of [<code>LMClient</code>](#LMClient)  
-**Todo**
-
-- [ ] проверить работу
-
+**Access**: public  
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -382,7 +380,7 @@ client.on('control', function(control){  console.log('receive control "' + cont
 | Name | Type | Description |
 | --- | --- | --- |
 | name | <code>string</code> | имя канала |
-| [attrId] | <code>number</code> | идентификатор атрибута |
+| [attrId] | <code>number</code> \| <code>undefined</code> | идентификатор атрибута |
 
 **Example**  
 ```js
