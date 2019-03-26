@@ -675,10 +675,10 @@ class LMClient extends EventEmitter {
         // проверка типа и значения
         if(!this._checkValue(value, channel.type)) return false;
         // проверка на изменения
-        if((channel.quality == stOk) && (channel.value == value)) return true;
+        if((channel.quality === stOk) && (channel.value === value)) return true;
         // фильтрация значений с плавающей точкой
         try {
-            if(((channel.type == VT_R4)||(channel.type == VT_R8))&&(channel.quality == stOk)&&(ATTR_PERCENTDB in channel.attributes)) {
+            if(((channel.type === VT_R4)||(channel.type === VT_R8))&&(channel.quality === stOk)&&(ATTR_PERCENTDB in channel.attributes)) {
                 if((ATTR_EUType in channel.attributes)&&(channel.attributes[ATTR_EUType].value === 1)&&(ATTR_EUInfo1 in channel.attributes)) {
                     // верхний и нижний диапазоны заданы
                     let minmax = channel.attributes[ATTR_EUInfo1].value;
@@ -720,12 +720,12 @@ class LMClient extends EventEmitter {
      */
     setQuality(name, quality) {
         // качество stOk устанавливать нельзя, вместо этого нужно установить значение канала
-        if(quality == stOk) return false;
+        if(quality === stOk) return false;
         // проверка на наличие канала
         let channel = this.channelsMap.get(name);
         if(!channel) return false;
         //
-        if(channel.quality == quality) return true;
+        if(channel.quality === quality) return true;
         //
         channel.quality = quality;
         channel.dt = new Date();
@@ -1093,7 +1093,7 @@ class LMClient extends EventEmitter {
                 //
                 if(flags & 8) {
                     // пришла команда управления каналом
-                    if(quality == stOk) {
+                    if(quality === stOk) {
                         // посыляем уведомление
                         this.emit('control', {
                             'name':     channelName,
@@ -1823,7 +1823,7 @@ class LMClient extends EventEmitter {
                 break;
             }
             case VT_BOOL: {
-                result.value = buf.readInt16LE(offset) == -1;
+                result.value = buf.readInt16LE(offset) === -1;
                 offset += 2;
                 break;
             }
