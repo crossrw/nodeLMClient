@@ -668,14 +668,20 @@ class LMClient extends EventEmitter {
      */
     setValue(name, value) {
         // установка значения только в режиме опрос
-        if(!this.options.opros) return false;
+        if(!this.options.opros) {
+            return false;
+        }
         // проверка на наличие канала
         let channel = this.channelsMap.get(name);
         if(!channel) return false;
         // проверка типа и значения
-        if(!this._checkValue(value, channel.type)) return false;
+        if(!this._checkValue(value, channel.type)) {
+            return false;
+        }
         // проверка на изменения
-        if((channel.quality === stOk) && (channel.value === value)) return true;
+        if((channel.quality === stOk) && (channel.value === value)) {
+            return true;
+        }
         // фильтрация значений с плавающей точкой
         try {
             if(((channel.type === VT_R4)||(channel.type === VT_R8))&&(channel.quality === stOk)&&(ATTR_PERCENTDB in channel.attributes)) {
@@ -854,7 +860,7 @@ class LMClient extends EventEmitter {
      * @param {number} [offset] - смещение не обработанных команд
      */
     _truncateInBuf(offset) {
-        if(offset === undefined) offset = this.inbuf.length;
+        if(typeof offset === 'undefined') offset = this.inbuf.length;
         if(this.inbuf.length > 0) {
             this.inbuf = this.inbuf.slice(offset);
         }
@@ -1591,7 +1597,9 @@ class LMClient extends EventEmitter {
             }
         });
         // передача на сервер
-        if(buf.length > 0) this.socket.write(buf);
+        if(buf.length > 0) {
+            this.socket.write(buf);
+        }
     }
     /**
      * Регистрация канала на сервере
@@ -1750,7 +1758,7 @@ class LMClient extends EventEmitter {
         /** @type {VarType} */
         let result = {};
         //
-        if(type === undefined) {
+        if(typeof type === 'undefined') {
             // если тип не указан, то читаем его из буфера
             result.type = buf.readUInt16LE(offset);
             offset += 2;

@@ -39,7 +39,7 @@ client.on('control', function(ch){
     client.setValue(ch.name, ch.value);
 });
 client.on('delete', function(name, attrId){
-    if(attrId === undefined) console.log('channel "' + name + '" was removed');
+    if(typeof attrId === 'undefined') console.log('channel "' + name + '" was removed');
     else console.log('attribute ' + attrId + ' was removed from channel "' + name + '" deleted');
 });
 client.on('error', function(err){
