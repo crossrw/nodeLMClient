@@ -860,7 +860,9 @@ class LMClient extends EventEmitter {
      * @param {number} [offset] - смещение не обработанных команд
      */
     _truncateInBuf(offset) {
-        if(typeof offset === 'undefined') offset = this.inbuf.length;
+        if(typeof offset === 'undefined') {
+            offset = this.inbuf.length;
+        }
         if(this.inbuf.length > 0) {
             this.inbuf = this.inbuf.slice(offset);
         }
@@ -1515,8 +1517,12 @@ class LMClient extends EventEmitter {
         let offset = buf.writeUInt8(42, 0);
         //
         let role = 0;
-        if(this.options.opros) role += 2;
-        if(this.options.client) role += 4;
+        if(this.options.opros) {
+            role += 2;
+        }
+        if(this.options.client) {
+            role += 4;
+        }
         offset = buf.writeUInt8(role, offset);
         //
         buf.write(this._asciiz(this.options.login, 40), offset, 40, 'ascii');
@@ -1582,16 +1588,14 @@ class LMClient extends EventEmitter {
         // буфер для сборки структур
         let buf = Buffer.allocUnsafe(0);
         // перебор каналов
-        this.channelsMap.forEach(channel => {
+        this.channelsMap.forEach((channel) => {
             // регистрация каналов
             if(channel.needRegister) {
-                // this._registerChannel(channel);
                 buf = Buffer.concat([buf, this._registerChannel(channel, true)]);
                 channel.needRegister = false;
             }
             // отправка данных
             if(channel.needSend && channel.active) {
-                // this._sendChannel(channel);
                 buf = Buffer.concat([buf, this._sendChannel(channel, true)]);
                 channel.needSend = false;
             }
@@ -1623,8 +1627,12 @@ class LMClient extends EventEmitter {
         offset += 2;
         // флаги
         var flags = 2 + 4 + 16 + 32 + 128;          // жду ответа + чужие атрибуты + оповещения + изменения атрибутов + время в TDateTime
-        if(channel.writeEnable) flags += 8;         // разрешение записи
-        if(channel.saveServer) flags += 512;        // сохранять на сервере
+        if(channel.writeEnable) {
+            flags += 8;         // разрешение записи
+        }
+        if(channel.saveServer) {
+            flags += 512;        // сохранять на сервере
+        }
         offset = buf.writeUInt16LE(flags, offset);
         // имя канала
         offset += this._vt_string(channel.name).copy(buf, offset);
@@ -1635,7 +1643,7 @@ class LMClient extends EventEmitter {
         var attrCount = 0;
         offset += 2;
         // цикл по атрибутам
-        Object.keys(channel.attributes).forEach(attrId => {
+        Object.keys(channel.attributes).forEach((attrId) => {
             let attr = channel.attributes[attrId];
             if(!attr.fromServer) {
                 // отправляем только те атрибуты, которые не были присланы с сервера
@@ -1734,7 +1742,9 @@ class LMClient extends EventEmitter {
     _attributeToBuffer(attr) {
         var buf = Buffer.allocUnsafe(1024);
         // проверка типа атрибута
-        if(!(attr.id in validAttributes)) throw new Error('атрибут с неизвестным идентификатором id:' + attr.id);
+        if(!(attr.id in validAttributes)) {
+            throw new Error('атрибут с неизвестным идентификатором id:' + attr.id);
+        }
         var attrType = validAttributes[attr.id];
         // id
         var offset = buf.writeUInt16LE(attr.id, 0);
@@ -1969,7 +1979,9 @@ class LMClient extends EventEmitter {
         str = utf8ToWin1251(str);
         //
         if(str.length >= len) str = str.substring(0, len);
-        while(str.length < len) str += '\0';
+        while(str.length < len) {
+            str += '\0';
+        }
         return str;
     }
     /**
