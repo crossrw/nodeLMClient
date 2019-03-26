@@ -729,14 +729,48 @@ class LMClient extends EventEmitter {
      * активности и разрешения записи значений, тип значения value должен быть совместим с типом канала.
      * При выполнении перечисленных выше условий метод возвращает true, иначе - false.
      * Метод не устанавливает значение канала, полученную команду управления сервер пересылает клиенту типа "опрос", который сформировал этот канал.
-     * @todo проверить работу
+     * @public
      * @param {string} name Имя канала
      * @param {*} value Значение команды управления
      * @return {boolean}
      */
     sendControl(name, value) {
         if(!(this.options.client && this.loggedIn)) return false;
-        return this._sendControlStruct(name, value);
+        // Cmd          UI1     55
+        // Size         UI2
+        // Flag         UI1
+        // Number       UI4
+        // TimeStamp    R8
+        // Quality      UI1
+        // Type         UI2
+        // Value        VARTYPE
+        let channel = this.channelsMap.get(name);
+        if(!(channel && channel.active && channel.writeEnable && ('creator' in channel))) return false;
+        // проверка типа и значения
+        if(!this._checkValue(value, channel.type)) return false;
+        //
+        var buf = Buffer.allocUnsafe(4096);
+        // Cmd          UI1     55
+        let offset = buf.writeUInt8(55, 0);
+        // Size         UI2     пока пропускаем
+        offset += 2;
+        // Flag         UI1     00001101
+        offset = buf.writeUInt8(13, offset);
+        // Number       UI4
+        offset = buf.writeUInt32LE(channel.number, offset);
+        // TimeStamp    R8
+        offset = buf.writeDoubleLE(this._dateToDateTime(new Date()), offset);
+        // Quality      UI1
+        offset = buf.writeUInt8(stOk, offset);
+        // Type         UI2
+        // Value        VARTYPE
+        offset += this._writeVarTypeValue(value, channel.type).copy(buf, offset);
+        // Size         UI2
+        buf.writeUInt16LE(offset, 1);
+        // передача
+        this.socket.write(buf.slice(0, offset));
+        // успешно
+        return true;
     }
     /**
      * Отключение от сервера с последующим возможным повторным подключением
@@ -1443,50 +1477,6 @@ class LMClient extends EventEmitter {
             default:
                 return 0;
         }
-    }
-    /**
-     * Отправка структуры управления каналом
-     * @private
-     * @param {string} name 
-     * @param {*} value 
-     * @returns {boolean}
-     */
-    _sendControlStruct(name, value) {
-        // Cmd          UI1     55
-        // Size         UI2
-        // Flag         UI1
-        // Number       UI4
-        // TimeStamp    R8
-        // Quality      UI1
-        // Type         UI2
-        // Value        VARTYPE
-        let channel = this.channelsMap.get(name);
-        if(!channel) return false;
-        //
-        if(!(channel.active && channel.writeEnable && ('creator' in channel))) return false;
-        // проверка типа и значения
-        if(!this._checkValue(value, channel.type)) return false;
-        //
-        var buf = Buffer.allocUnsafe(4096);
-        // Cmd          UI1     55
-        let offset = buf.writeUInt8(55, 0);
-        // Size         UI2     пока пропускаем
-        offset += 2;
-        // Flag         UI1     00001101
-        offset = buf.writeUInt8(13, offset);
-        // Number       UI4
-        offset = buf.writeUInt32LE(channel.number, offset);
-        // TimeStamp    R8
-        offset = buf.writeDoubleLE(this._dateToDateTime(new Date()), offset);
-        // Quality      UI1
-        offset = buf.writeUInt8(stOk, offset);
-        // Type         UI2
-        // Value        VARTYPE
-        offset += this._writeVarTypeValue(value, channel.type).copy(buf, offset);
-        // Size         UI2
-        buf.writeUInt16LE(offset, 1);
-        // передача
-        this.socket.write(buf.slice(0, offset));
     }
     /**
      * Отправка структуры регистрации
