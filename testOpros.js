@@ -80,7 +80,10 @@ client.connect();
 var value = 0;
 var value2 = 0;
 setInterval(function(){
-    if(value++ >= 120) value = 0;
+    value++;
+    if(value >= 120) {
+        value = 0;
+    }
     value2 += 0.1;
     // простые значения
     client.setValue('channel_VT_I1', value);

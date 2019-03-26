@@ -41,8 +41,11 @@ client.on('channel', function(channel){
     console.log('receive channel ' + channel.name + ' value:' + channel.value + ' quality:' + channel.quality);
 });
 client.on('delete', function(name, attrId){
-    if(attrId === undefined) console.log('channel "' + name + '" was removed');
-    else console.log('attribute ' + attrId + ' was removed from channel "' + name + '"');
+    if(attrId === undefined) {
+        console.log('channel "' + name + '" was removed');
+    } else {
+        console.log('attribute ' + attrId + ' was removed from channel "' + name + '"');
+    }
 });
 client.on('change', function(channel){
     console.log('changed channel ' + channel.name);

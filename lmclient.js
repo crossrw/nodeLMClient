@@ -665,7 +665,7 @@ class LMClient extends EventEmitter {
         // фильтрация значений с плавающей точкой
         try {
             if(((channel.type == VT_R4)||(channel.type == VT_R8))&&(channel.quality == stOk)&&(ATTR_PERCENTDB in channel.attributes)) {
-                if((ATTR_EUType in channel.attributes)&&(channel.attributes[ATTR_EUType].value == 1)&&(ATTR_EUInfo1 in channel.attributes)) {
+                if((ATTR_EUType in channel.attributes)&&(channel.attributes[ATTR_EUType].value === 1)&&(ATTR_EUInfo1 in channel.attributes)) {
                     // верхний и нижний диапазоны заданы
                     let minmax = channel.attributes[ATTR_EUInfo1].value;
                     if(Math.abs(channel.value - value) < Math.abs(minmax[0] - minmax[1])/100 * channel.attributes[ATTR_PERCENTDB].value) {
@@ -1972,7 +1972,7 @@ class LMClient extends EventEmitter {
      * @returns {Date}
      */
     _dateTimeToDate(serverDateTime) {
-        return new Date((serverDateTime - 25569)*86400000 + this.serverTimeBias*60000);
+        return new Date(((serverDateTime - 25569)*1440 + this.serverTimeBias)*60000);
     }
     /**
      * Преобразование объекта Date в тип TDateTime
@@ -1981,7 +1981,7 @@ class LMClient extends EventEmitter {
      * @returns {number}
      */
     _dateToDateTime(date) {
-        return (date.valueOf() - this.serverTimeBias*60000)/86400000 + 25569;
+        return (date.valueOf()/1000 - this.serverTimeBias*60)/86400 + 25569;
     }
     /**
      * Возвращает имя канала по его номеру
