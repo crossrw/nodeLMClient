@@ -225,7 +225,9 @@ function utf8ToWin1251(s) {
     var L = [];
     for (var i=0; i < s.length; i++) {
         var ord = s.charCodeAt(i);
-        if (ord in win1251Map) L.push(String.fromCharCode(win1251Map[ord]));
+        if (ord in win1251Map) {
+            L.push(String.fromCharCode(win1251Map[ord]));
+        }
     }
     return L.join('');
 }
@@ -243,7 +245,9 @@ function win1251toUtf8(s) {
         var ord = s.charCodeAt(i);
         if (ord >= 128) {
             ord = ord - 128;
-            if(ord in utf8Map) L.push(utf8Map[ord]);
+            if(ord in utf8Map) {
+                L.push(utf8Map[ord]);
+            }
         } else {
             L.push(String.fromCharCode(ord));
         }
@@ -493,7 +497,7 @@ class LMClient extends EventEmitter {
         this.channelsMap.forEach(channel => {
             if('creator' in channel) {
                 // канал полученный от сервера в режиме "клиент"
-                if(channel.quality != stOff) {
+                if(channel.quality !== stOff) {
                     channel.quality = stOff;
                     this.emit('channel', channel);
                 }
@@ -528,11 +532,17 @@ class LMClient extends EventEmitter {
      */
     add(name, type, writeEnable, options = {}) {
         // добавление каналов только в режиме опрос
-        if(!this.options.opros) return false;
+        if(!this.options.opros) {
+            return false;
+        }
         // проверка на корректность типа данных
-        if(!validTypes.includes(type & VT_MASK)) return false;
+        if(!validTypes.includes(type & VT_MASK)) {
+            return false;
+        }
         // проверка на дублирование имени
-        if(this.channelsMap.has(name)) return false;
+        if(this.channelsMap.has(name)) {
+            return false;
+        }
         // создаем канал
         /** @type {Channel2} */
         var channel = {
@@ -609,10 +619,14 @@ class LMClient extends EventEmitter {
      */
     delete(name, attrId) {
         // проверка регистрации и типа подключения
-        if(!(this.loggedIn && this.options.client)) return false;
+        if(!(this.loggedIn && this.options.client)) {
+            return false;
+        }
         // проверка на наличие канала
         let channel = this.channelsMap.get(name);
-        if(!channel) return false;
+        if(!channel) {
+            return false;
+        }
         //
         let buf = Buffer.allocUnsafe(13);
         // Cmd          UI1     66
@@ -625,7 +639,7 @@ class LMClient extends EventEmitter {
         // Number       UI4
         offset = buf.writeUInt32LE(channel.number, offset);
         // ActionType   UI1
-        if(attrId === undefined) {
+        if(typeof attrId === 'undefined') {
             // удаляю канал
             offset = buf.writeUInt8(1, offset);
             offset = buf.writeUInt32LE(0, offset);
@@ -1474,9 +1488,8 @@ class LMClient extends EventEmitter {
                 return 25;
             case 100:
                 return 13;
-            default:
-                return 0;
         }
+        return 0;
     }
     /**
      * Отправка структуры регистрации

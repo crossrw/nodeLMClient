@@ -41,7 +41,7 @@ client.on('channel', function(channel){
     console.log('receive channel ' + channel.name + ' value:' + channel.value + ' quality:' + channel.quality);
 });
 client.on('delete', function(name, attrId){
-    if(attrId === undefined) {
+    if(typeof attrId === 'undefined') {
         console.log('channel "' + name + '" was removed');
     } else {
         console.log('attribute ' + attrId + ' was removed from channel "' + name + '"');
@@ -61,5 +61,4 @@ client.connect();
 
 setTimeout(function(){
     client.sendControl('test_channel_3.4', 1.2345);
-
 }, 3000);
