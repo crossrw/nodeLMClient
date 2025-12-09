@@ -5,10 +5,11 @@
  */
 
 const EventEmitter = require('events');
+const crypto = require('crypto');
 const net = require('net');
 
 const clientHiVersion = 1;                  // версия клиента
-const clientLoVersion = 0;
+const clientLoVersion = 1;
 
 // значения свойства quality канала
 const stOk              = 0;                // ok
@@ -201,6 +202,7 @@ validAttributes[ATTR_UNITNUMBER]         = VT_UI4;
  * @property {boolean} reconnect - автоматически переподключаться при ошибках и разрывах связи
  * @property {boolean} opros - тип учетной записи "опрос"
  * @property {boolean} client - тип учетной записи "клиент"
+ * @property {boolean} hashAuth - авторизация с использованием MD5
  */
 /**
  * Параметры задаваемые при создании канала
@@ -254,6 +256,29 @@ function win1251toUtf8(s) {
     }
     return L.join('');
 }
+
+/**
+ * Расчёт CRC-16 CCITT
+ * @param {Buffer} buffer Буфер данных
+ * @param {Number} len Количество байт данных
+ * @param {Number} offset Смещение первого элемента от начала буфера
+ */
+function crc16lm(buffer, len, offset) {
+    var odd;
+    var crc = 0xFFFF;
+    if(!offset) offset = 0;
+    //
+    for (var i = 0; i < len; i++) {
+        crc = crc ^ (buffer[offset + i] << 8);
+        for (var j = 0; j < 8; j++) {
+            odd = crc & 0x8000;
+            crc = crc << 1;
+            if (odd) crc = crc ^ 0x1021;
+        }
+    }
+    return crc & 0xFFFF;
+}
+
 /**
  * Событие формируется при начале подключения к серверу.
  * @event LMClient#connecting
@@ -377,7 +402,8 @@ class LMClient extends EventEmitter {
             password:   '',                         // пароль
             reconnect:  true,                       // автоматически переподключаться при ошибках и разрывах связи
             opros:      true,                       // тип учетной записи "опрос"
-            client:     false                       // тип учетной записи "клиент" (не поддерживается)
+            client:     false,                      // тип учетной записи "клиент" (не поддерживается)
+            hashAuth:   false                       // авторизация с использованием MD5
         }, options);
         //
         this.socket = null;
@@ -1457,6 +1483,38 @@ class LMClient extends EventEmitter {
                 }
                 break;
             }
+            case 125: {
+                // запрос сервера для проверки пароля
+                // VT_I1[32]    32 байта запроса сервера
+                // VT_UI2       CRC
+                let crc = crc16lm(data, 33, offset - 1);        // расчитанная CRC
+                let crcRec = data.readUInt16LE(offset + 32);    // полученная CRC
+                if(crc != crcRec) {
+                    this.emit('error', new Error('ошибка CRC в полученной структуре 125'));
+                    this._disconnect();
+                    return;
+                }
+                // буфер расчёта MD5
+                let md5sum = crypto.createHash('md5');
+                let mdbuf = Buffer.alloc(52);
+                data.copy(mdbuf, 0, offset, offset + 32);                               // 32 байта запроса сервера
+                mdbuf.write(this._asciiz(this.options.password, 20), 32, 20, 'ascii');  // 20 байт пароля
+                md5sum.update(mdbuf);
+                let md5res = md5sum.digest();
+                // буфер команды 126
+                let buf126 = Buffer.alloc(19);
+                // VT_UI1       код команды 126
+                // VT_UI16      MD5 digest
+                // VT_UI2       CRC
+                buf126.writeUInt8(126, 0);                                              // код команды
+                md5res.copy(buf126, 1);                                                 // результат MD5
+                crc = crc16lm(buf126, 17);                                              // расчитываем CRC
+                buf126.writeUInt16LE(crc, 17);
+                //
+                // передача
+                this.socket.write(buf126);
+                break;
+            }
         }
     }
     /**
@@ -1492,10 +1550,12 @@ class LMClient extends EventEmitter {
                 return 10;
             case 34:
                 return 99;
-            case 43:
+            case 43:                        // Ответ сервера на регистрацию командой 42/126
                 return 25;
-            case 100:
+            case 100:                       // Статус выполнения предыдущей команды сервером
                 return 13;
+            case 125:                       // Запрос сервера для проверки пароля
+                return 35;
         }
         return 0;
     }
@@ -1504,14 +1564,17 @@ class LMClient extends EventEmitter {
      * @private
      */
     _sendRegisterStruct() {
-        // Cmd:         UI1     42
-        // Type:        UI1     2-опрос, 4-клиент
-        // Name:        I1[40]  логин (ASCIIZ)
-        // Pass:        I1[20]  пароль (ASCIIZ)
-        // HiVer        UI1
-        // LoVer        UI1
-        // Flags        UI1
-        // Reserved:    UI1[7]  должны быть 0
+        //
+        // Cmd:         UI1     42                      1   0
+        // Type:        UI1     2-опрос, 4-клиент       1   1
+        // Name:        I1[40]  логин (ASCIIZ)          40  2
+        // Pass:        I1[20]  пароль (ASCIIZ)         20  42
+        // HiVer        UI1                             1   62
+        // LoVer        UI1                             1   63
+        // Flags        UI1                             1   64
+        // Reserved:    UI1[5]  должны быть 0           5   65
+        // CRC:         UI2                             2   70
+        //
         let buf = Buffer.alloc(72);
         //
         let offset = buf.writeUInt8(42, 0);
@@ -1528,13 +1591,35 @@ class LMClient extends EventEmitter {
         buf.write(this._asciiz(this.options.login, 40), offset, 40, 'ascii');
         offset += 40;
         //
-        buf.write(this._asciiz(this.options.password, 20), offset, 20, 'ascii');
+        if(!this.options.hashAuth) {
+            buf.write(this._asciiz(this.options.password, 20), offset, 20, 'ascii');
+        }
         offset += 20;
         //
         offset = buf.writeUInt8(clientHiVersion, offset);
         offset = buf.writeUInt8(clientLoVersion, offset);
-        // флаги 00000100
-        offset = buf.writeUInt8(4, offset);
+        //
+        // flags, бит
+        // 0    - 0-опрос или клиент, 1-OPC DA
+        // 1,2  - 01-FILETIME(WINAPI 8 байт), 10-VT_DATE, 11-VT_STRING (ISO8601), 00-не используется
+        // 3    - 0-опрос или клиент, 1-Server Relay
+        // 4    - не используется, должен быть 0
+        // 5    - не используется, должен быть 0
+        // 6    - не используется, должен быть 0
+        // 7    - 0-простая авторизация, 1-авторизация MD5+CRC16
+        let flags = 4;                  // флаги 00000100
+        if(this.options.hashAuth) {
+            // использование CRC
+            flags = flags | 128;
+        }
+        offset = buf.writeUInt8(flags, offset);
+        //
+        // crc
+        if(this.options.hashAuth) {
+            let crc = crc16lm(buf, 70);
+            buf.writeUInt16LE(crc, 70);
+        }
+        //
         // передача
         this.socket.write(buf);
     }

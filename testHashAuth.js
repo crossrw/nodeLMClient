@@ -7,12 +7,12 @@ var lm = require('./lmclient.js');
 var client = new lm.LMClient({
         host:       '127.0.0.1',                // адрес сервера
         port:       3000,                       // порт сервера
-        login:      'login',                    // логин
-        password:   'password',                 // пароль
+        login:      '2500024',                  // логин
+        password:   '123',                      // пароль
         reconnect:  true,                       // автоматически переподключаться при ошибках и разрывах связи
         opros:      true,                       // тип учетной записи "опрос"
         client:     false,                      // тип учетной записи "клиент"
-        hashAuth:   false                       // авторизация без использования MD5
+        hashAuth:   true                        // авторизация с использованием MD5
 });
 
 // события

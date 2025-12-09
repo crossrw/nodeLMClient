@@ -2,7 +2,6 @@
 [![npm](https://img.shields.io/npm/v/lmclient.svg?style=flat-square)](https://www.npmjs.com/package/lmclient)
 [![npm bundle size](https://img.shields.io/bundlephobia/min/lmclient.svg?style=flat-square)](https://www.npmjs.com/package/lmclient)
 [![npm module downloads](http://img.shields.io/npm/dt/lmclient.svg?style=flat-square)](https://www.npmjs.com/package/lmclient)
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/d1954134bb304c5599e8b3fa30553e97)](https://www.codacy.com/app/crossrw/nodeLMClient?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=crossrw/nodeLMClient&amp;utm_campaign=Badge_Grade)
 [![license](https://img.shields.io/npm/l/lmclient.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 
 # Клиент SCADA системы LanMon для Node.js
@@ -44,6 +43,14 @@ $ npm install lmclient
 <dl>
 <dt><a href="#LMClient">LMClient</a></dt>
 <dd><p>Класс клиента сервера LM</p>
+</dd>
+</dl>
+
+## Functions
+
+<dl>
+<dt><a href="#crc16lm">crc16lm(buffer, len, offset)</a></dt>
+<dd><p>Расчёт CRC-16 CCITT</p>
 </dd>
 </dl>
 
@@ -410,6 +417,19 @@ client.on('delete', function(name, attrId){  if(attrId === undefined) console.l
 | --- | --- | --- |
 | error | <code>Error</code> | ошибка |
 
+<a name="crc16lm"></a>
+
+## crc16lm(buffer, len, offset)
+Расчёт CRC-16 CCITT
+
+**Kind**: global function  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| buffer | <code>Buffer</code> | Буфер данных |
+| len | <code>Number</code> | Количество байт данных |
+| offset | <code>Number</code> | Смещение первого элемента от начала буфера |
+
 <a name="Channel2"></a>
 
 ## Channel2 : <code>Object</code>
@@ -482,6 +502,7 @@ client.on('delete', function(name, attrId){  if(attrId === undefined) console.l
 | reconnect | <code>boolean</code> | автоматически переподключаться при ошибках и разрывах связи |
 | opros | <code>boolean</code> | тип учетной записи "опрос" |
 | client | <code>boolean</code> | тип учетной записи "клиент" |
+| hashAuth | <code>boolean</code> | авторизация с использованием MD5 |
 
 <a name="ChannelOptions"></a>
 
@@ -504,7 +525,7 @@ client.on('delete', function(name, attrId){  if(attrId === undefined) console.l
 
 ## Примеры использования
 
-Примеры испоьзования библиотеки для типов учетной записи "опрос" и "клиент" приведены в файлах **testOpros.js** и **testClient.js** соответственно.
+Примеры использования библиотеки для типов учетной записи "опрос" и "клиент" приведены в файлах **testOpros.js** и **testClient.js** соответственно.
 
 ## Существующие ограничения
 
@@ -524,4 +545,4 @@ client.on('delete', function(name, attrId){  if(attrId === undefined) console.l
 Замечания и предложения отправляйте на адрес lanmon@mnppsaturn.ru или непосредственно в **Issues/Pull requests**.
 
 * * *
-&copy; 2019 ООО "МНПП Сатурн"
+&copy; 2019-25 ООО "МНПП Сатурн"
