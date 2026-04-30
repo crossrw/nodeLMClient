@@ -686,13 +686,15 @@ class LMClient extends EventEmitter {
      * канала указанному при его создании. Установленное значение канала будет передано на сервер. Кроме того, метод
      * устанавливает свойство канала quality (качество) в значение stOk. Метод используется при подключении с 
      * типом учетной записи "опрос". Метод может быть вызван при любом состоянии подключения к сервреру.
+     * Если параметр dt не указан, то используется текущее время.
      * Метод возвращает значение false если канал с указанным именем не найден или указан некорректный тип учетной записи.
      * @public
      * @param {string} name Имя канала
      * @param {*} value Новое значение канала
+     * @param {Date|number|string} [ts] Метка времени: объект Date или количество мс от 01-01-1970 00:00:00
      * @returns {boolean}
      */
-    setValue(name, value) {
+    setValue(name, value, ts) {
         // установка значения только в режиме опрос
         if(!this.options.opros) {
             return false;
@@ -730,7 +732,11 @@ class LMClient extends EventEmitter {
         // устанавливаем новое значение
         channel.value = value;
         channel.quality = stOk;
-        channel.dt = new Date();
+        //
+        if(ts instanceof Date) channel.dt = ts;
+        else if((typeof(ts) === 'number')||(typeof(ts) === 'string')) channel.dt = new Date(ts);
+        else channel.dt = new Date();
+        //
         channel.needSend = true;
         // передача на сервер
         if(this.loggedIn) this._sendAll();
